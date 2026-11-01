@@ -8,7 +8,9 @@ struct SummaryCardView: View {
         CardSurface(title: "Summary") {
             CardText(value: card.projectName, placeholder: "Project name not provided")
                 .font(.title2)
+                .accessibilityIdentifier("generatedProjectName")
             CardText(value: card.updateNotes, placeholder: "No project update provided")
+                .accessibilityIdentifier("generatedUpdate")
         }
     }
 }
@@ -22,10 +24,12 @@ struct KPICardView: View {
                let total = card.total,
                let progress = card.progress {
                 Text("\(completed) of \(total) milestones completed")
+                    .accessibilityIdentifier("generatedMilestoneCounts")
                     .fixedSize(horizontal: false, vertical: true)
                 Text(progress, format: .percent.precision(.fractionLength(0...1)))
                     .font(.largeTitle)
                     .monospacedDigit()
+                    .accessibilityIdentifier("generatedPercentage")
                 ProgressView(value: progress)
                     .accessibilityLabel("Milestones completed")
                     .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0...1))))
@@ -65,12 +69,14 @@ struct ImageCardView: View {
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: 320)
                     .accessibilityLabel("Project image: \(card.caption)")
+                    .accessibilityIdentifier("generatedImage")
             } else if didLoad {
                 Label("Image preview unavailable", systemImage: "photo")
             } else {
                 ProgressView("Loading image preview…")
             }
             CardText(value: card.caption, placeholder: "Unnamed image")
+                .accessibilityIdentifier("generatedImageCaption")
                 .font(.callout)
         }
         .task(id: card.image.id) {
