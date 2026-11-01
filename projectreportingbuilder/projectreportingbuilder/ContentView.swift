@@ -4,16 +4,130 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @State private var draft = ReportDraft()
+    @State private var isImportingImage = false
+    @State private var cards: [CardPreviewItem] = []
+    @State private var generatedRevision: DraftRevision?
+    @State private var generationID = UUID()
+
+    private var canGenerate: Bool {
+        draft.hasProjectInformation && draft.milestones.progress != nil && !isImportingImage
+    }
+
+    private var hasChanges: Bool {
+        generatedRevision.map { $0 != DraftRevision(draft) } ?? false
+    }
 
     var body: some View {
-        Form {
-            ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
-            MilestoneSection(metric: $draft.milestones)
-            ImageImportSection(image: $draft.image)
+        HSplitView {
+            VStack(spacing: 0) {
+                WorkspaceHeading(title: "Project inputs", subtitle: "Shape your next project update.")
+                Form {
+                    ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
+                    MilestoneSection(metric: $draft.milestones)
+                    ImageImportSection(image: $draft.image, isLoading: $isImportingImage)
+                }
+                .formStyle(.grouped)
+                .accessibilityIdentifier("inputForm")
+                Divider()
+                GenerationControls(
+                    hasProjectInformation: draft.hasProjectInformation,
+                    metricMessage: draft.milestones.validation.message,
+                    isImportingImage: isImportingImage,
+                    canGenerate: canGenerate,
+                    generate: generateCards
+                )
+            }
+            .frame(minWidth: 360, idealWidth: 430, maxWidth: 560)
+            CardPreviewPanel(cards: cards, hasChanges: hasChanges, generationID: generationID)
+                .frame(minWidth: 360, idealWidth: 570, maxWidth: .infinity)
         }
-        .formStyle(.grouped)
         .navigationTitle("Project Reporting Builder")
-        .frame(minWidth: 460, idealWidth: 640, minHeight: 520, idealHeight: 760)
+        .frame(minWidth: 780, idealWidth: 1060, minHeight: 560, idealHeight: 760)
+    }
+
+    private func generateCards() {
+        guard canGenerate else { return }
+        cards = ReportBuilder.build(from: draft).map(CardPreviewItem.init)
+        generatedRevision = DraftRevision(draft)
+        // Recreate the snapshot's accessibility elements when generated values change.
+        generationID = UUID()
+    }
+}
+
+/// Compare editable input without adding UI-only equality requirements to domain models.
+private struct DraftRevision: Equatable {
+    let name: String
+    let update: String
+    let completed: String
+    let total: String
+    let imageID: UUID?
+
+    init(_ draft: ReportDraft) {
+        name = draft.projectName
+        update = draft.projectUpdate
+        completed = draft.milestones.completedInput
+        total = draft.milestones.totalInput
+        imageID = draft.image?.id
+    }
+}
+
+private struct GenerationControls: View {
+    let hasProjectInformation: Bool
+    let metricMessage: LocalizedStringResource?
+    let isImportingImage: Bool
+    let canGenerate: Bool
+    let generate: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if isImportingImage {
+                    Text("Wait for the image to finish importing.")
+                } else if !hasProjectInformation {
+                    Text("Add a project name and update to generate cards.")
+                } else if let metricMessage {
+                    Text(metricMessage)
+                } else {
+                    Text("Ready to generate. Images are optional.")
+                }
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("generationFeedback")
+
+            Button(action: generate) {
+                Label("Generate Cards", systemImage: "rectangle.stack")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.return, modifiers: .command)
+            .disabled(!canGenerate)
+            .help("Generate previews from your current inputs (Command–Return).")
+            .accessibilityIdentifier("generateCards")
+        }
+        .padding(20)
+        .background(.bar)
+    }
+}
+
+struct WorkspaceHeading: View {
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.title2.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            Text(subtitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
     }
 }
 
@@ -86,7 +200,7 @@ private struct MilestoneSection: View {
 private struct ImageImportSection: View {
     @Binding var image: ImportedImage?
     @State private var isImporterPresented = false
-    @State private var isLoading = false
+    @Binding var isLoading: Bool
     @State private var importError: String?
     @State private var preview: NSImage?
 
