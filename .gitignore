@@ -1,0 +1,34 @@
+# macOS metadata
+.DS_Store
+.AppleDouble/
+._*
+
+# Personal Xcode settings; keep shared settings and schemes
+xcuserdata/
+*.xcuserstate
+
+# Generated build output
+DerivedData/
+build/
+.build/
+*.xcarchive
+*.dSYM/
+
+# Local caches and temporary files
+.cache/
+.swiftpm/xcode/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Environment secrets; keep safe example templates
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Keep source, assets, project settings, Package.swift, Package.resolved
+# and other dependency lockfiles under version control.
