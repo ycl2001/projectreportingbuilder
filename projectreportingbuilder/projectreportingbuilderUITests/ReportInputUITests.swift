@@ -8,6 +8,10 @@ final class ReportInputUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launch()
+        // macOS can restore a prior session with all windows closed.
+        if !app.windows.firstMatch.waitForExistence(timeout: 3) {
+            app.typeKey("n", modifierFlags: .command)
+        }
 
         let name = app.textFields["projectName"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
@@ -44,11 +48,21 @@ final class ReportInputUITests: XCTestCase {
         XCTAssertTrue(app.images["imagePreview"].waitForExistence(timeout: 10))
         XCTAssertTrue((app.staticTexts["imageFilename"].value as? String ?? "").contains("project.png"))
 
+        app.buttons["generateCards"].click()
+        XCTAssertTrue(app.images["generatedImage"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "project.png")
+        XCTAssertEqual(app.staticTexts["generatedPercentage"].value as? String, "30%")
+
         try selectImage(jpeg, in: app)
         let replacement = NSPredicate(format: "value CONTAINS %@", "replacement.jpg")
         expectation(for: replacement, evaluatedWith: app.staticTexts["imageFilename"])
         waitForExpectations(timeout: 10)
         XCTAssertTrue(app.images["imagePreview"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["cardsOutOfDate"].exists)
+        XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "project.png")
+        app.buttons["generateCards"].click()
+        XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "replacement.jpg")
+        XCTAssertFalse(app.descendants(matching: .any)["cardsOutOfDate"].exists)
 
         // Cancellation must leave both the prior image and text intact.
         app.buttons["importImage"].click()
