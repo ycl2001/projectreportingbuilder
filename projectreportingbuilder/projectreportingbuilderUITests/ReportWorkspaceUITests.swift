@@ -26,8 +26,7 @@ final class ReportWorkspaceUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["generatedPercentage"].exists)
         XCTAssertEqual(app.staticTexts["generatedCardCount"].value as? String, "1 card · Preview only")
 
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Milestone completion", in: app)
+        chooseProgress("Milestones", in: app)
         replaceText(in: app.textFields["completedMilestones"], with: "11")
         replaceText(in: app.textFields["totalMilestones"], with: "10")
         XCTAssertFalse(generate.isEnabled)
@@ -88,38 +87,46 @@ final class ReportWorkspaceUITests: XCTestCase {
         let generate = app.buttons["generateCards"]
         XCTAssertTrue(generate.isEnabled)
 
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Completion percentage", in: app)
+        chooseProgress("Percentage", in: app)
         XCTAssertFalse(generate.isEnabled)
         replaceText(in: app.textFields["estimatedPercentage"], with: "101")
         XCTAssertFalse(generate.isEnabled)
         replaceText(in: app.textFields["estimatedPercentage"], with: "62.5")
+        let note = app.descendants(matching: .any)["progressNote"].firstMatch
+        replaceText(in: note, with: "Discovery complete. Migration remains.")
         generate.click()
+        XCTAssertEqual(app.staticTexts["generatedProgressNote"].value as? String, "Discovery complete. Migration remains.")
+        replaceText(in: note, with: "Pilot complete.")
+        XCTAssertTrue(app.descendants(matching: .any)["cardsOutOfDate"].exists)
+        XCTAssertEqual(app.staticTexts["generatedProgressNote"].value as? String, "Discovery complete. Migration remains.")
+        generate.click()
+        XCTAssertEqual(app.staticTexts["generatedProgressNote"].value as? String, "Pilot complete.")
         XCTAssertEqual(app.staticTexts["generatedPercentage"].value as? String, "62.5%")
-        XCTAssertEqual(app.staticTexts["generatedProgressSource"].value as? String, "Manual estimate")
+        XCTAssertEqual(app.staticTexts["generatedProgressSource"].value as? String, "Self-reported")
         XCTAssertFalse(app.staticTexts["generatedMilestoneCounts"].exists)
 
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Milestone completion", in: app)
+        chooseProgress("Milestones", in: app)
         replaceText(in: app.textFields["completedMilestones"], with: "2")
         replaceText(in: app.textFields["totalMilestones"], with: "8")
         generate.click()
         XCTAssertEqual(app.staticTexts["generatedPercentage"].value as? String, "25%")
         XCTAssertEqual(app.staticTexts["generatedProgressSource"].value as? String, "Calculated from milestones")
+        XCTAssertEqual(note.value as? String, "Pilot complete.")
+        XCTAssertEqual(app.staticTexts["generatedProgressNote"].value as? String, "Pilot complete.")
 
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Completion percentage", in: app)
+        chooseProgress("Percentage", in: app)
         XCTAssertEqual(app.textFields["estimatedPercentage"].value as? String, "62.5")
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Milestone completion", in: app)
+        chooseProgress("Milestones", in: app)
         XCTAssertEqual(app.textFields["completedMilestones"].value as? String, "2")
         XCTAssertEqual(app.textFields["totalMilestones"].value as? String, "8")
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("No progress metric", in: app)
+        chooseProgress("Skip", in: app)
         XCTAssertTrue(generate.isEnabled)
         generate.click()
         XCTAssertFalse(app.staticTexts["generatedPercentage"].exists)
         XCTAssertTrue(app.staticTexts["generatedProjectName"].exists)
+        XCTAssertFalse(app.staticTexts["generatedProgressNote"].exists)
+        chooseProgress("Percentage", in: app)
+        XCTAssertEqual(note.value as? String, "Pilot complete.")
     }
 
     @MainActor
@@ -154,9 +161,7 @@ extension XCTestCase {
 extension XCTestCase {
     @MainActor
     func chooseProgress(_ title: String, in app: XCUIApplication) {
-        let item = app.menuItems[title]
-        XCTAssertTrue(item.waitForExistence(timeout: 5))
-        // Avoid XCTest's menu traversal reopening an already-open native popup.
-        item.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        let item = app.radioButtons[title]
+        clickInput(item)
     }
 }

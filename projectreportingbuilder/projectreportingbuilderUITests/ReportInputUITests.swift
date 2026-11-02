@@ -20,8 +20,7 @@ final class ReportInputUITests: XCTestCase {
         let update = app.textViews["projectUpdate"]
         clickInput(update)
         update.typeText("Delivery is on track.\nNext: pilot release.")
-        clickInput(app.popUpButtons["progressMethod"])
-        chooseProgress("Milestone completion", in: app)
+        chooseProgress("Milestones", in: app)
         let completed = app.textFields["completedMilestones"]
         clickInput(completed)
         completed.typeText("3")
