@@ -31,10 +31,24 @@ struct CardPreviewPanel: View {
             WorkspaceHeading(title: "Snippet Cards", subtitle: "A clear view of your project, ready to review.")
             Divider()
             if cards.isEmpty {
-                ContentUnavailableView {
-                    Label("Your cards start here", systemImage: "rectangle.stack")
-                } description: {
-                    Text("Enter your project update and milestones, then choose Generate Cards. Add an image for a third card.")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Image(systemName: "rectangle.stack")
+                            .font(.largeTitle)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        Text("Turn your update into cards")
+                            .font(.title2.weight(.semibold))
+                        Text("Start with a project name and update, then choose Generate Cards.")
+                            .foregroundStyle(.secondary)
+                        Text("Progress and images are optional.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 420, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(28)
                 }
                 .accessibilityIdentifier("cardsEmptyState")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -52,7 +66,7 @@ struct CardPreviewPanel: View {
                             .font(.callout)
                             .accessibilityIdentifier("cardsUpToDate")
                     }
-                    Text("\(cards.count) cards · Preview only")
+                    Text(cards.count == 1 ? "1 card · Preview only" : "\(cards.count) cards · Preview only")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("generatedCardCount")
@@ -100,7 +114,8 @@ private struct CardPreviewRow: View {
     let draft = ReportDraft(
         projectName: "Customer portal rollout",
         projectUpdate: "Pilot delivery is on track.\n\nNext: validate the release with the support team.",
-        milestones: MilestoneMetric(completedInput: "7", totalInput: "10")
+        milestones: MilestoneMetric(completedInput: "7", totalInput: "10"),
+        progressMethod: .milestones
     )
     CardPreviewPanel(
         cards: ReportBuilder.build(from: draft).map(CardPreviewItem.init),

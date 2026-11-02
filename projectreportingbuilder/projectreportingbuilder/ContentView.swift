@@ -10,7 +10,7 @@ struct ContentView: View {
     @State private var generationID = UUID()
 
     private var canGenerate: Bool {
-        draft.hasProjectInformation && draft.milestones.progress != nil && !isImportingImage
+        draft.canGenerate && !isImportingImage
     }
 
     private var hasChanges: Bool {
@@ -21,17 +21,25 @@ struct ContentView: View {
         HSplitView {
             VStack(spacing: 0) {
                 WorkspaceHeading(title: "Project inputs", subtitle: "Shape your next project update.")
-                Form {
-                    ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
-                    MilestoneSection(metric: $draft.milestones)
-                    ImageImportSection(image: $draft.image, isLoading: $isImportingImage)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
+                        Divider()
+                        ProgressInputSection(
+                            method: $draft.progressMethod,
+                            percentage: $draft.estimatedPercentage,
+                            milestones: $draft.milestones
+                        )
+                        Divider()
+                        ImageImportSection(image: $draft.image, isLoading: $isImportingImage)
+                    }
+                    .padding(20)
                 }
-                .formStyle(.grouped)
                 .accessibilityIdentifier("inputForm")
                 Divider()
                 GenerationControls(
                     hasProjectInformation: draft.hasProjectInformation,
-                    metricMessage: draft.milestones.validation.message,
+                    metricMessage: draft.progressValidationMessage,
                     isImportingImage: isImportingImage,
                     canGenerate: canGenerate,
                     generate: generateCards
@@ -58,6 +66,8 @@ struct ContentView: View {
 private struct DraftRevision: Equatable {
     let name: String
     let update: String
+    let method: ProgressMethod
+    let percentage: String
     let completed: String
     let total: String
     let imageID: UUID?
@@ -65,8 +75,10 @@ private struct DraftRevision: Equatable {
     init(_ draft: ReportDraft) {
         name = draft.projectName
         update = draft.projectUpdate
-        completed = draft.milestones.completedInput
-        total = draft.milestones.totalInput
+        method = draft.progressMethod
+        percentage = draft.progressMethod == .percentage ? draft.estimatedPercentage.input : ""
+        completed = draft.progressMethod == .milestones ? draft.milestones.completedInput : ""
+        total = draft.progressMethod == .milestones ? draft.milestones.totalInput : ""
         imageID = draft.image?.id
     }
 }
@@ -88,7 +100,7 @@ private struct GenerationControls: View {
                 } else if let metricMessage {
                     Text(metricMessage)
                 } else {
-                    Text("Ready to generate. Images are optional.")
+                    Text("Ready to generate.")
                 }
             }
             .font(.callout)
@@ -136,31 +148,83 @@ private struct ProjectInformationSection: View {
     @Binding var update: String
 
     var body: some View {
-        Section("Project information") {
-            TextField("Project name", text: $name, prompt: Text("e.g. Customer portal rollout"))
-                .accessibilityIdentifier("projectName")
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Project name")
+                    .font(.headline)
+                TextField("Project name", text: $name, prompt: Text("e.g. Customer portal rollout"))
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("projectName")
+            }
             VStack(alignment: .leading, spacing: 8) {
                 Text("Project update")
+                    .font(.headline)
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $update)
-                        .frame(minHeight: 120)
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .frame(height: 180)
+                        .padding(8)
                         .accessibilityLabel("Project update")
                         .accessibilityIdentifier("projectUpdate")
                     if update.isEmpty {
-                        Text("Summarize progress, risks and next steps…")
+                        Text("Progress, risks and next steps…")
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 16)
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
                     }
                 }
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(.secondary.opacity(0.25), lineWidth: 1)
+                }
             }
-            if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || update.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Enter a project name and update. Your draft stays editable while fields are empty.")
+        }
+    }
+}
+
+private struct ProgressInputSection: View {
+    @Binding var method: ProgressMethod
+    @Binding var percentage: PercentageMetric
+    @Binding var milestones: MilestoneMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Progress · Optional")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            Picker("Reporting method", selection: $method) {
+                Text("No progress metric").tag(ProgressMethod.none)
+                Text("Completion percentage").tag(ProgressMethod.percentage)
+                Text("Milestone completion").tag(ProgressMethod.milestones)
+            }
+            .pickerStyle(.menu)
+            .accessibilityIdentifier("progressMethod")
+
+            switch method {
+            case .none:
+                Text("Generate a summary without a KPI card.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            case .percentage:
+                Text("Estimated completion (%)")
+                    .font(.subheadline)
+                TextField("Estimated completion (%)", text: $percentage.input, prompt: Text("e.g. 62.5"))
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("estimatedPercentage")
+                Text("Manual estimate · 0–100%. Use a dot for decimals.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                if let message = percentage.validationMessage {
+                    Text(message)
+                        .font(.callout)
+                        .accessibilityIdentifier("percentageValidation")
+                }
+            case .milestones:
+                MilestoneSection(metric: $milestones)
             }
         }
     }
@@ -170,10 +234,16 @@ private struct MilestoneSection: View {
     @Binding var metric: MilestoneMetric
 
     var body: some View {
-        Section("Milestones") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Completed milestones")
+                .font(.subheadline)
             TextField("Completed milestones", text: $metric.completedInput, prompt: Text("e.g. 3"))
+                .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("completedMilestones")
+            Text("Total milestones")
+                .font(.subheadline)
             TextField("Total milestones", text: $metric.totalInput, prompt: Text("e.g. 10"))
+                .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("totalMilestones")
             if let progress = metric.progress {
                 LabeledContent("Progress") {
@@ -205,7 +275,10 @@ private struct ImageImportSection: View {
     @State private var preview: NSImage?
 
     var body: some View {
-        Section("Project image") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Project image · Optional")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
             Button(image == nil ? "Import image…" : "Replace image…") {
                 isImporterPresented = true
             }
