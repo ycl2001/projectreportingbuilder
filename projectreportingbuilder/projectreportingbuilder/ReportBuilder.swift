@@ -1,12 +1,23 @@
 import Foundation
 
-/// Creates a value snapshot without modifying, trimming, or discarding draft input.
+/// Builds only the selected, valid progress metric; never infers missing progress.
 enum ReportBuilder {
     static func build(from draft: ReportDraft) -> [SnippetCard] {
         var cards: [SnippetCard] = [
-            .summary(.init(projectName: draft.projectName, updateNotes: draft.projectUpdate)),
-            .kpi(.init(milestones: draft.milestones))
+            .summary(.init(projectName: draft.projectName, updateNotes: draft.projectUpdate))
         ]
+        switch draft.progressMethod {
+        case .none:
+            break
+        case .percentage:
+            if draft.estimatedPercentage.progress != nil {
+                cards.append(.kpi(.estimate(draft.estimatedPercentage)))
+            }
+        case .milestones:
+            if draft.milestones.progress != nil {
+                cards.append(.kpi(.milestones(draft.milestones)))
+            }
+        }
         if let image = draft.image {
             cards.append(.image(.init(image: image)))
         }

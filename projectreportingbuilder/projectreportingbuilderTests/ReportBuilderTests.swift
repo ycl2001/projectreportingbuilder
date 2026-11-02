@@ -9,6 +9,7 @@ struct ReportBuilderTests {
         var draft = ReportDraft()
         draft.projectName = "  Project A  "
         draft.projectUpdate = "First line\n\nSecond line 🚀\n"
+        draft.progressMethod = .milestones
         draft.milestones = MilestoneMetric(completedInput: " 003 ", totalInput: "010")
         draft.image = attachment
 
@@ -22,8 +23,12 @@ struct ReportBuilderTests {
         }
         #expect(summary.projectName == draft.projectName)
         #expect(summary.updateNotes == draft.projectUpdate)
-        #expect(kpi.milestones.completedInput == " 003 ")
-        #expect(kpi.milestones.totalInput == "010")
+        guard case let .milestones(source) = kpi else {
+            Issue.record("Expected milestone source.")
+            return
+        }
+        #expect(source.completedInput == " 003 ")
+        #expect(source.totalInput == "010")
         #expect(kpi.completed == 3)
         #expect(kpi.total == 10)
         #expect(image.image.id == attachment.id)
@@ -48,6 +53,7 @@ struct ReportBuilderTests {
     ])
     func metricAccuracy(completed: String, total: String, expected: Double) throws {
         var draft = ReportDraft()
+        draft.progressMethod = .milestones
         draft.milestones = MilestoneMetric(completedInput: completed, totalInput: total)
         let cards = ReportBuilder.build(from: draft)
         guard case let .kpi(card) = cards[1] else {
@@ -68,20 +74,14 @@ struct ReportBuilderTests {
     ])
     func invalidMetricsNeverProduceValues(completed: String, total: String) {
         var draft = ReportDraft()
+        draft.progressMethod = .milestones
         draft.milestones = MilestoneMetric(completedInput: completed, totalInput: total)
         let cards = ReportBuilder.build(from: draft)
-        guard case let .kpi(card) = cards[1] else {
-            Issue.record("Expected KPI card with validation feedback.")
-            return
-        }
-        #expect(card.validation == draft.milestones.validation)
-        #expect(card.validation.message != nil)
-        #expect(card.completed == nil)
-        #expect(card.total == nil)
-        #expect(card.progress == nil)
-        #expect(card.percentage == nil)
-        #expect(card.milestones.completedInput == completed)
-        #expect(card.milestones.totalInput == total)
+        #expect(cards.count == 1)
+        #expect(draft.progressValidationMessage == draft.milestones.validation.message)
+        #expect(!draft.canGenerate)
+        #expect(draft.milestones.completedInput == completed)
+        #expect(draft.milestones.totalInput == total)
     }
 
     @Test(arguments: [("", ""), ("", "Keep these notes"), ("Keep this name", ""), (" \n ", "\t")])
@@ -90,7 +90,7 @@ struct ReportBuilderTests {
         draft.projectName = name
         draft.projectUpdate = update
         let cards = ReportBuilder.build(from: draft)
-        #expect(cards.count == 2)
+        #expect(cards.count == 1)
         guard case let .summary(card) = cards[0] else {
             Issue.record("Expected summary even when fields are missing.")
             return
@@ -101,21 +101,16 @@ struct ReportBuilderTests {
 
     @Test func emptyDraftHasNoImageAndNoPercentage() {
         let cards = ReportBuilder.build(from: ReportDraft())
-        #expect(cards.count == 2)
-        guard case let .kpi(card) = cards[1] else {
-            Issue.record("Expected KPI placeholder.")
-            return
-        }
-        #expect(card.validation == .missingInput)
-        #expect(card.percentage == nil)
+        #expect(cards.count == 1)
+        #expect(ReportDraft().progressMethod == .none)
     }
 
     @Test func emptyImagePayloadIsPreservedForPresentationFallback() {
         var draft = ReportDraft()
         draft.image = ImportedImage(filename: "", data: Data())
         let cards = ReportBuilder.build(from: draft)
-        #expect(cards.count == 3)
-        guard case let .image(card) = cards[2] else {
+        #expect(cards.count == 2)
+        guard case let .image(card) = cards[1] else {
             Issue.record("Expected attached image payload to be retained.")
             return
         }

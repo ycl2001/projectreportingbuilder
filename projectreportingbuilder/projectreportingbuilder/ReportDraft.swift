@@ -5,6 +5,20 @@ struct ReportDraft {
     var projectUpdate = ""
     var milestones = MilestoneMetric()
     var image: ImportedImage?
+    var progressMethod: ProgressMethod = .none
+    var estimatedPercentage = PercentageMetric()
+
+    var progressValidationMessage: LocalizedStringResource? {
+        switch progressMethod {
+        case .none: nil
+        case .percentage: estimatedPercentage.validationMessage
+        case .milestones: milestones.validation.message
+        }
+    }
+
+    var canGenerate: Bool {
+        hasProjectInformation && progressValidationMessage == nil
+    }
 
     var hasProjectInformation: Bool {
         !projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

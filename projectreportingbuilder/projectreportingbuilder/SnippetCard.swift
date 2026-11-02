@@ -1,7 +1,6 @@
 import Foundation
 
-/// A report contains one summary, one KPI, and an optional image card.
-/// Payloads retain the original input; presentation supplies empty-state text.
+/// A summary with optional progress and image cards. Payloads retain source input.
 enum SnippetCard {
     case summary(Summary)
     case kpi(KPI)
@@ -12,28 +11,39 @@ enum SnippetCard {
         let updateNotes: String
     }
 
-    struct KPI {
-        let milestones: MilestoneMetric
+    enum KPI {
+        case milestones(MilestoneMetric)
+        case estimate(PercentageMetric)
 
-        var validation: MilestoneMetric.Validation { milestones.validation }
-        var progress: Double? { milestones.progress }
-        var percentage: Double? { progress.map { $0 * 100 } }
+        var progress: Double? {
+            switch self {
+            case .milestones(let metric): metric.progress
+            case .estimate(let metric): metric.progress
+            }
+        }
+
+        var percentage: Double? {
+            switch self {
+            case .milestones(let metric): metric.progress.map { $0 * 100 }
+            case .estimate(let metric): metric.percentage
+            }
+        }
 
         var completed: Int? {
-            guard case let .valid(completed, _) = validation else { return nil }
+            guard case let .milestones(metric) = self,
+                  case let .valid(completed, _) = metric.validation else { return nil }
             return completed
         }
 
         var total: Int? {
-            guard case let .valid(_, total) = validation else { return nil }
+            guard case let .milestones(metric) = self,
+                  case let .valid(_, total) = metric.validation else { return nil }
             return total
         }
     }
 
     struct ImageContent {
         let image: ImportedImage
-
-        // Phase 1 has no separate caption field; retain the full filename.
         var caption: String { image.filename }
     }
 }

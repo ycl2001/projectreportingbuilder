@@ -19,38 +19,34 @@ struct KPICardView: View {
     let card: SnippetCard.KPI
 
     var body: some View {
-        CardSurface(title: "Milestone progress") {
-            if let completed = card.completed,
-               let total = card.total,
-               let progress = card.progress {
-                Text("\(completed) of \(total) milestones completed")
-                    .accessibilityIdentifier("generatedMilestoneCounts")
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(progress, format: .percent.precision(.fractionLength(0...1)))
+        CardSurface(title: "Project progress") {
+            switch card {
+            case .milestones:
+                Text("Calculated from milestones")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("generatedProgressSource")
+                if let completed = card.completed, let total = card.total {
+                    Text("\(completed) of \(total) milestones completed")
+                        .accessibilityIdentifier("generatedMilestoneCounts")
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .estimate:
+                Text("Manual estimate")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("generatedProgressSource")
+            }
+            if let progress = card.progress {
+                Text(progress, format: .percent.precision(.fractionLength(0...4)))
                     .font(.largeTitle)
                     .monospacedDigit()
                     .accessibilityIdentifier("generatedPercentage")
                 ProgressView(value: progress)
-                    .accessibilityLabel("Milestones completed")
-                    .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0...1))))
+                    .accessibilityLabel("Project completion")
+                    .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0...4))))
             } else {
-                if let message = card.validation.message {
-                    Label {
-                        Text(message)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "info.circle")
-                    }
-                }
-                // Keep invalid input visible so it can be corrected during integration.
-                Text("Completed input")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                CardText(value: card.milestones.completedInput, placeholder: "Not provided")
-                Text("Total input")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                CardText(value: card.milestones.totalInput, placeholder: "Not provided")
+                Text("Progress unavailable")
             }
         }
     }
