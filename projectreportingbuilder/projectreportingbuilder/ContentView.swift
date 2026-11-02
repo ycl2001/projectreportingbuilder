@@ -28,7 +28,8 @@ struct ContentView: View {
                         ProgressInputSection(
                             method: $draft.progressMethod,
                             percentage: $draft.estimatedPercentage,
-                            milestones: $draft.milestones
+                            milestones: $draft.milestones,
+                            note: $draft.progressNote
                         )
                         Divider()
                         ImageImportSection(image: $draft.image, isLoading: $isImportingImage)
@@ -67,6 +68,7 @@ private struct DraftRevision: Equatable {
     let name: String
     let update: String
     let method: ProgressMethod
+    let note: String
     let percentage: String
     let completed: String
     let total: String
@@ -76,6 +78,7 @@ private struct DraftRevision: Equatable {
         name = draft.projectName
         update = draft.projectUpdate
         method = draft.progressMethod
+        note = draft.progressMethod == .none ? "" : draft.progressNote
         percentage = draft.progressMethod == .percentage ? draft.estimatedPercentage.input : ""
         completed = draft.progressMethod == .milestones ? draft.milestones.completedInput : ""
         total = draft.progressMethod == .milestones ? draft.milestones.totalInput : ""
@@ -190,6 +193,7 @@ private struct ProgressInputSection: View {
     @Binding var method: ProgressMethod
     @Binding var percentage: PercentageMetric
     @Binding var milestones: MilestoneMetric
+    @Binding var note: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -197,11 +201,12 @@ private struct ProgressInputSection: View {
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
             Picker("Reporting method", selection: $method) {
-                Text("No progress metric").tag(ProgressMethod.none)
-                Text("Completion percentage").tag(ProgressMethod.percentage)
-                Text("Milestone completion").tag(ProgressMethod.milestones)
+                Text("Percentage").tag(ProgressMethod.percentage)
+                Text("Milestones").tag(ProgressMethod.milestones)
+                Text("Skip").tag(ProgressMethod.none)
             }
-            .pickerStyle(.menu)
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Progress reporting method")
             .accessibilityIdentifier("progressMethod")
 
             switch method {
@@ -210,12 +215,12 @@ private struct ProgressInputSection: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             case .percentage:
-                Text("Estimated completion (%)")
+                Text("Reported completion (%)")
                     .font(.subheadline)
-                TextField("Estimated completion (%)", text: $percentage.input, prompt: Text("e.g. 62.5"))
+                TextField("Reported completion (%)", text: $percentage.input, prompt: Text("e.g. 62.5"))
                     .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("estimatedPercentage")
-                Text("Manual estimate · 0–100%. Use a dot for decimals.")
+                Text("Self-reported · 0–100%. Use a dot for decimals.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 if let message = percentage.validationMessage {
@@ -225,6 +230,22 @@ private struct ProgressInputSection: View {
                 }
             case .milestones:
                 MilestoneSection(metric: $milestones)
+            }
+            if method != .none {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What does this progress represent?")
+                        .font(.subheadline)
+                    TextField(
+                        "What does this progress represent?",
+                        text: $note,
+                        prompt: Text("Summarise achievements, remaining work, or blockers..."),
+                        axis: .vertical
+                    )
+                    .lineLimit(3...6)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("What does this progress represent? Optional")
+                    .accessibilityIdentifier("progressNote")
+                }
             }
         }
     }

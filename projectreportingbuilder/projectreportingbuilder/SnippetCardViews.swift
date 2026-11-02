@@ -32,7 +32,7 @@ struct KPICardView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             case .estimate:
-                Text("Manual estimate")
+                Text("Self-reported")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("generatedProgressSource")
@@ -47,6 +47,11 @@ struct KPICardView: View {
                     .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0...4))))
             } else {
                 Text("Progress unavailable")
+            }
+            if !card.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(verbatim: card.note)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("generatedProgressNote")
             }
         }
     }
