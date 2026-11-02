@@ -53,6 +53,16 @@ final class ReportInputUITests: XCTestCase {
         XCTAssertTrue(app.images["generatedImage"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "project.png")
         XCTAssertEqual(app.staticTexts["generatedPercentage"].value as? String, "30%")
+        XCTAssertEqual(app.staticTexts.matching(identifier: "generatedProjectName").count, 1)
+        XCTAssertTrue(app.staticTexts["generatedUpdate"].exists)
+
+        let reportTitle = app.staticTexts["generatedProjectName"]
+        let previewScroll = app.scrollViews["cardPreviewScroll"]
+        for _ in 0..<4 {
+            previewScroll.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5))
+                .scroll(byDeltaX: 0, deltaY: -250)
+        }
+        XCTAssertFalse(reportTitle.isHittable)
 
         try selectImage(jpeg, in: app)
         let replacement = NSPredicate(format: "value CONTAINS %@", "replacement.jpg")
@@ -62,6 +72,9 @@ final class ReportInputUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["cardsOutOfDate"].exists)
         XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "project.png")
         app.buttons["generateCards"].click()
+        let reportHeaderIsVisible = NSPredicate(format: "hittable == true")
+        let reportHeaderExpectation = XCTNSPredicateExpectation(predicate: reportHeaderIsVisible, object: reportTitle)
+        XCTAssertEqual(XCTWaiter.wait(for: [reportHeaderExpectation], timeout: 5), .completed)
         XCTAssertEqual(app.staticTexts["generatedImageCaption"].value as? String, "replacement.jpg")
         XCTAssertFalse(app.descendants(matching: .any)["cardsOutOfDate"].exists)
 
