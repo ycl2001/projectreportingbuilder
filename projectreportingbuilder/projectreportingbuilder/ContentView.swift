@@ -99,7 +99,7 @@ private struct GenerationControls: View {
                 if isImportingImage {
                     Text("Wait for the image to finish importing.")
                 } else if !hasProjectInformation {
-                    Text("Add a project name and update to generate cards.")
+                    Text("Add a project name and update to generate a report.")
                 } else if let metricMessage {
                     Text(metricMessage)
                 } else {
@@ -112,14 +112,14 @@ private struct GenerationControls: View {
             .accessibilityIdentifier("generationFeedback")
 
             Button(action: generate) {
-                Label("Generate Cards", systemImage: "rectangle.stack")
+                Label("Generate Report", systemImage: "rectangle.stack")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(!canGenerate)
-            .help("Generate previews from your current inputs (Command–Return).")
+            .help("Generate a report from your current inputs (Command–Return).")
             .accessibilityIdentifier("generateCards")
         }
         .padding(20)

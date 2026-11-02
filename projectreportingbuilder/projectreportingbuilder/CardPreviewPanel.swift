@@ -21,6 +21,10 @@ struct CardPreviewItem: Identifiable {
     }
 }
 
+private enum PreviewScrollAnchor: Hashable {
+    case reportHeader
+}
+
 struct CardPreviewPanel: View {
     let cards: [CardPreviewItem]
     let hasChanges: Bool
@@ -28,7 +32,7 @@ struct CardPreviewPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            WorkspaceHeading(title: "Snippet Cards", subtitle: "A clear view of your project, ready to review.")
+            WorkspaceHeading(title: "Report Preview", subtitle: "One cohesive project report, ready to review and share.")
             Divider()
             if cards.isEmpty {
                 ScrollView {
@@ -37,9 +41,9 @@ struct CardPreviewPanel: View {
                             .font(.largeTitle)
                             .foregroundStyle(Color.accessibleSecondary)
                             .accessibilityHidden(true)
-                        Text("Turn your update into cards")
+                        Text("Build your project report")
                             .font(.title2.weight(.semibold))
-                        Text("Start with a project name and update, then choose Generate Cards.")
+                        Text("Start with a project name and update, then choose Generate Report.")
                             .foregroundStyle(Color.accessibleSecondary)
                         Text("Progress and images are optional.")
                             .font(.callout)
@@ -58,15 +62,15 @@ struct CardPreviewPanel: View {
                         Label("Changes not generated", systemImage: "arrow.clockwise.circle")
                             .font(.headline)
                             .accessibilityIdentifier("cardsOutOfDate")
-                        Text("These cards show your last generation. Choose Generate Cards to refresh them.")
+                        Text("This report shows your last generation. Choose Generate Report to refresh it.")
                             .font(.callout)
                             .foregroundStyle(Color.accessibleSecondary)
                     } else {
-                        Label("Cards are up to date", systemImage: "checkmark.circle")
+                        Label("Report is up to date", systemImage: "checkmark.circle")
                             .font(.callout)
                             .accessibilityIdentifier("cardsUpToDate")
                     }
-                    Text(cards.count == 1 ? "1 card · Ready to share" : "\(cards.count) cards · Ready to share")
+                    Text(cards.count == 1 ? "1 section · Ready to share" : "\(cards.count) sections · Ready to share")
                         .font(.caption)
                         .foregroundStyle(Color.accessibleSecondary)
                         .accessibilityIdentifier("generatedCardCount")
@@ -75,25 +79,108 @@ struct CardPreviewPanel: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        ForEach(cards) { item in
-                            CardPreviewRow(item: item)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            UnifiedReportView(cards: cards.map(\.card))
+                                .id(PreviewScrollAnchor.reportHeader)
+                            ReportSharingActions(cards: cards.map(\.card))
+
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Share individual sections")
+                                    .font(.headline)
+                                    .accessibilityAddTraits(.isHeader)
+                                Text("Copy or export a reusable Snippet Card without sharing the full report.")
+                                    .font(.callout)
+                                    .foregroundStyle(Color.accessibleSecondary)
+                                ForEach(cards) { item in
+                                    SnippetSharingRow(item: item)
+                                }
+                            }
+                            .padding(.top, 8)
                         }
+                        .id(generationID)
+                        .frame(maxWidth: 760)
+                        .frame(maxWidth: .infinity)
+                        .padding(20)
                     }
-                    .id(generationID)
-                    .frame(maxWidth: 760)
-                    .frame(maxWidth: .infinity)
-                    .padding(20)
+                    .accessibilityIdentifier("cardPreviewScroll")
+                    .onChange(of: generationID) {
+                        proxy.scrollTo(PreviewScrollAnchor.reportHeader, anchor: .top)
+                    }
                 }
-                .accessibilityIdentifier("cardPreviewScroll")
             }
         }
         .background(.background.secondary)
     }
 }
 
-private struct CardPreviewRow: View {
+private struct ReportSharingActions: View {
+    let cards: [SnippetCard]
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var feedback: String?
+    @State private var isSharing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    copyButton
+                    exportButton
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    copyButton
+                    exportButton
+                }
+            }
+            .disabled(isSharing)
+            if let feedback {
+                Text(feedback)
+                    .font(.callout)
+                    .foregroundStyle(Color.accessibleSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("reportSharingFeedback")
+            }
+        }
+    }
+
+    private var copyButton: some View {
+        Button {
+            do {
+                try CardSharingService.copyReport(cards, colorScheme: colorScheme)
+                feedback = "Copied the full report as text and image."
+            } catch {
+                feedback = "Copy failed: \(error.localizedDescription)"
+            }
+        } label: {
+            Label("Copy Report", systemImage: "doc.on.doc")
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("copyReport")
+    }
+
+    private var exportButton: some View {
+        Button {
+            isSharing = true
+            feedback = nil
+            Task {
+                defer { isSharing = false }
+                do {
+                    if let url = try await CardSharingService.exportReport(cards, colorScheme: colorScheme) {
+                        feedback = "Exported \(url.lastPathComponent)."
+                    }
+                } catch {
+                    feedback = "Export failed: \(error.localizedDescription)"
+                }
+            }
+        } label: {
+            Label("Export Report as PNG…", systemImage: "square.and.arrow.up")
+        }
+        .accessibilityIdentifier("exportReport")
+    }
+}
+
+private struct SnippetSharingRow: View {
     let item: CardPreviewItem
     @Environment(\.colorScheme) private var colorScheme
     @State private var feedback: String?
@@ -101,8 +188,10 @@ private struct CardPreviewRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SnippetCardContent(card: item.card)
-            HStack {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Label(CardSharingService.title(for: item.card), systemImage: "rectangle.on.rectangle")
+                    .font(.callout.weight(.medium))
+                Spacer(minLength: 8)
                 Button {
                     do {
                         try CardSharingService.copy(item.card, colorScheme: colorScheme)
@@ -137,11 +226,17 @@ private struct CardPreviewRow: View {
             .disabled(isSharing)
             if let feedback {
                 Text(feedback)
-                    .font(.callout)
+                    .font(.caption)
                     .foregroundStyle(Color.accessibleSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("sharingFeedback-\(item.id)")
             }
+        }
+        .padding(12)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.accessibleBoundary, lineWidth: 1)
         }
     }
 }
