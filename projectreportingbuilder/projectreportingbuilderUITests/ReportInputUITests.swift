@@ -15,16 +15,18 @@ final class ReportInputUITests: XCTestCase {
 
         let name = app.textFields["projectName"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
-        name.click()
+        clickInput(name)
         name.typeText("Portal rollout")
         let update = app.textViews["projectUpdate"]
-        update.click()
+        clickInput(update)
         update.typeText("Delivery is on track.\nNext: pilot release.")
+        clickInput(app.popUpButtons["progressMethod"])
+        chooseProgress("Milestone completion", in: app)
         let completed = app.textFields["completedMilestones"]
-        completed.click()
+        clickInput(completed)
         completed.typeText("3")
         let total = app.textFields["totalMilestones"]
-        total.click()
+        clickInput(total)
         total.typeText("10")
         XCTAssertEqual(app.staticTexts["milestoneProgress"].value as? String, "30%")
 
@@ -65,7 +67,7 @@ final class ReportInputUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["cardsOutOfDate"].exists)
 
         // Cancellation must leave both the prior image and text intact.
-        app.buttons["importImage"].click()
+        clickInput(app.buttons["importImage"])
         let cancel = app.buttons["Cancel"].firstMatch
         XCTAssertTrue(cancel.waitForExistence(timeout: 5))
         cancel.click()
@@ -82,8 +84,7 @@ final class ReportInputUITests: XCTestCase {
     @MainActor
     private func selectImage(_ url: URL, in app: XCUIApplication) throws {
         let button = app.buttons["importImage"]
-        if !button.isHittable { app.scrollViews.firstMatch.swipeUp() }
-        button.click()
+        clickInput(button)
         XCTAssertTrue(app.buttons["Cancel"].firstMatch.waitForExistence(timeout: 5))
         app.typeKey("g", modifierFlags: [.command, .shift])
         app.typeKey("a", modifierFlags: .command)
