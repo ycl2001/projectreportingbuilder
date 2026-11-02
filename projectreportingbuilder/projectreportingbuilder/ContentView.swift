@@ -107,7 +107,7 @@ private struct GenerationControls: View {
                 }
             }
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.accessibleSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("generationFeedback")
 
@@ -138,7 +138,7 @@ struct WorkspaceHeading: View {
                 .accessibilityAddTraits(.isHeader)
             Text(subtitle)
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.accessibleSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,7 +172,7 @@ private struct ProjectInformationSection: View {
                         .accessibilityIdentifier("projectUpdate")
                     if update.isEmpty {
                         Text("Progress, risks and next steps…")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.accessibleSecondary)
                             .padding(.horizontal, 13)
                             .padding(.vertical, 16)
                             .allowsHitTesting(false)
@@ -182,7 +182,7 @@ private struct ProjectInformationSection: View {
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
                 .overlay {
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(.secondary.opacity(0.25), lineWidth: 1)
+                        .stroke(Color.accessibleBoundary, lineWidth: 1)
                 }
             }
         }
@@ -213,7 +213,7 @@ private struct ProgressInputSection: View {
             case .none:
                 Text("Generate a summary without a KPI card.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accessibleSecondary)
             case .percentage:
                 Text("Reported completion (%)")
                     .font(.subheadline)
@@ -222,7 +222,7 @@ private struct ProgressInputSection: View {
                     .accessibilityIdentifier("estimatedPercentage")
                 Text("Self-reported · 0–100%. Use a dot for decimals.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accessibleSecondary)
                 if let message = percentage.validationMessage {
                     Text(message)
                         .font(.callout)
@@ -281,7 +281,7 @@ private struct MilestoneSection: View {
                     Image(systemName: "info.circle")
                 }
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.accessibleSecondary)
                 .accessibilityIdentifier("metricValidation")
             }
         }
@@ -308,7 +308,7 @@ private struct ImageImportSection: View {
 
             Text("Optional PNG or JPEG, up to 20 MB and 40 megapixels.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.accessibleSecondary)
 
             if isLoading {
                 ProgressView("Importing image…")
@@ -372,6 +372,16 @@ private struct ImageImportSection: View {
     }
 }
 
-#Preview {
+#Preview("System") {
     ContentView()
+}
+
+#Preview("Light") {
+    ContentView()
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark") {
+    ContentView()
+        .preferredColorScheme(.dark)
 }

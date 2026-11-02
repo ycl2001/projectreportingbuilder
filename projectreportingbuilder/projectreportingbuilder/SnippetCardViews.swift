@@ -24,7 +24,7 @@ struct KPICardView: View {
             case .milestones:
                 Text("Calculated from milestones")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accessibleSecondary)
                     .accessibilityIdentifier("generatedProgressSource")
                 if let completed = card.completed, let total = card.total {
                     Text("\(completed) of \(total) milestones completed")
@@ -34,7 +34,7 @@ struct KPICardView: View {
             case .estimate:
                 Text("Self-reported")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accessibleSecondary)
                     .accessibilityIdentifier("generatedProgressSource")
             }
             if let progress = card.progress {
@@ -107,7 +107,7 @@ private struct CardSurface<Content: View>: View {
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                .stroke(Color.accessibleBoundary, lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
     }
@@ -120,7 +120,7 @@ private struct CardText: View {
     var body: some View {
         if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Text(placeholder)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.accessibleSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         } else {
             Text(verbatim: value)
@@ -147,7 +147,7 @@ private struct CardProgressStyle: ProgressViewStyle {
     func makeBody(configuration: Configuration) -> some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                Capsule().fill(.secondary.opacity(0.2))
+                Capsule().fill(Color.accessibleBoundary)
                 Capsule().fill(.tint)
                     .frame(width: geometry.size.width * (configuration.fractionCompleted ?? 0))
             }
