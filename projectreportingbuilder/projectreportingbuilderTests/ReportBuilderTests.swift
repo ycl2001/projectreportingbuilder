@@ -23,7 +23,7 @@ struct ReportBuilderTests {
         }
         #expect(summary.projectName == draft.projectName)
         #expect(summary.updateNotes == draft.projectUpdate)
-        guard case let .milestones(source) = kpi else {
+        guard case let .milestones(source, _) = kpi else {
             Issue.record("Expected milestone source.")
             return
         }

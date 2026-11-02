@@ -12,31 +12,37 @@ enum SnippetCard {
     }
 
     enum KPI {
-        case milestones(MilestoneMetric)
-        case estimate(PercentageMetric)
+        case milestones(MilestoneMetric, note: String = "")
+        case estimate(PercentageMetric, note: String = "")
+
+        var note: String {
+            switch self {
+            case .milestones(_, let note), .estimate(_, let note): note
+            }
+        }
 
         var progress: Double? {
             switch self {
-            case .milestones(let metric): metric.progress
-            case .estimate(let metric): metric.progress
+            case .milestones(let metric, _): metric.progress
+            case .estimate(let metric, _): metric.progress
             }
         }
 
         var percentage: Double? {
             switch self {
-            case .milestones(let metric): metric.progress.map { $0 * 100 }
-            case .estimate(let metric): metric.percentage
+            case .milestones(let metric, _): metric.progress.map { $0 * 100 }
+            case .estimate(let metric, _): metric.percentage
             }
         }
 
         var completed: Int? {
-            guard case let .milestones(metric) = self,
+            guard case let .milestones(metric, _) = self,
                   case let .valid(completed, _) = metric.validation else { return nil }
             return completed
         }
 
         var total: Int? {
-            guard case let .milestones(metric) = self,
+            guard case let .milestones(metric, _) = self,
                   case let .valid(_, total) = metric.validation else { return nil }
             return total
         }

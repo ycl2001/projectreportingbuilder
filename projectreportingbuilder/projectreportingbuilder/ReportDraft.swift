@@ -7,6 +7,7 @@ struct ReportDraft {
     var image: ImportedImage?
     var progressMethod: ProgressMethod = .none
     var estimatedPercentage = PercentageMetric()
+    var progressNote = ""
 
     var progressValidationMessage: LocalizedStringResource? {
         switch progressMethod {

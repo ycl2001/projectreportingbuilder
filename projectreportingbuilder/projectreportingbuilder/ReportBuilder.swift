@@ -11,11 +11,11 @@ enum ReportBuilder {
             break
         case .percentage:
             if draft.estimatedPercentage.progress != nil {
-                cards.append(.kpi(.estimate(draft.estimatedPercentage)))
+                cards.append(.kpi(.estimate(draft.estimatedPercentage, note: draft.progressNote)))
             }
         case .milestones:
             if draft.milestones.progress != nil {
-                cards.append(.kpi(.milestones(draft.milestones)))
+                cards.append(.kpi(.milestones(draft.milestones, note: draft.progressNote)))
             }
         }
         if let image = draft.image {

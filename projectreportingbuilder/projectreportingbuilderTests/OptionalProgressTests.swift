@@ -25,7 +25,7 @@ struct OptionalProgressTests {
         #expect(draft.canGenerate)
         let cards = ReportBuilder.build(from: draft)
         #expect(cards.count == 2)
-        guard case let .kpi(card) = cards[1], case let .estimate(source) = card else {
+        guard case let .kpi(card) = cards[1], case let .estimate(source, _) = card else {
             Issue.record("Expected explicitly estimated KPI.")
             return
         }
@@ -51,6 +51,7 @@ struct OptionalProgressTests {
         var draft = ReportDraft(projectName: "Atlas", projectUpdate: "On track")
         draft.milestones = MilestoneMetric(completedInput: "2", totalInput: "8")
         draft.estimatedPercentage.input = "62.5"
+        draft.progressNote = "  Discovery done.\nMigration remains. 🚀  "
         for method in [ProgressMethod.percentage, .milestones, .none, .percentage] {
             draft.progressMethod = method
             let cards = ReportBuilder.build(from: draft)
@@ -62,6 +63,10 @@ struct OptionalProgressTests {
                     return
                 }
                 #expect(card.percentage == (method == .percentage ? 62.5 : 25))
+                #expect(card.note == draft.progressNote)
+                draft.progressNote = "Edited after generation"
+                #expect(card.note != draft.progressNote)
+                draft.progressNote = card.note
             }
             #expect(draft.estimatedPercentage.input == "62.5")
             #expect(draft.milestones.completedInput == "2")
