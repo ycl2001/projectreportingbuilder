@@ -35,15 +35,15 @@ struct CardPreviewPanel: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Image(systemName: "rectangle.stack")
                             .font(.largeTitle)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.accessibleSecondary)
                             .accessibilityHidden(true)
                         Text("Turn your update into cards")
                             .font(.title2.weight(.semibold))
                         Text("Start with a project name and update, then choose Generate Cards.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.accessibleSecondary)
                         Text("Progress and images are optional.")
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.accessibleSecondary)
                     }
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 420, alignment: .leading)
@@ -60,7 +60,7 @@ struct CardPreviewPanel: View {
                             .accessibilityIdentifier("cardsOutOfDate")
                         Text("These cards show your last generation. Choose Generate Cards to refresh them.")
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.accessibleSecondary)
                     } else {
                         Label("Cards are up to date", systemImage: "checkmark.circle")
                             .font(.callout)
@@ -68,7 +68,7 @@ struct CardPreviewPanel: View {
                     }
                     Text(cards.count == 1 ? "1 card · Ready to share" : "\(cards.count) cards · Ready to share")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.accessibleSecondary)
                         .accessibilityIdentifier("generatedCardCount")
                 }
                 .fixedSize(horizontal: false, vertical: true)
@@ -138,7 +138,7 @@ private struct CardPreviewRow: View {
             if let feedback {
                 Text(feedback)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accessibleSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("sharingFeedback-\(item.id)")
             }

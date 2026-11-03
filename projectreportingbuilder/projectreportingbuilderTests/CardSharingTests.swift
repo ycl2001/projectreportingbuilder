@@ -49,6 +49,23 @@ struct CardSharingTests {
         #expect(throws: (any Error).self) { try CardSharingService.writePNG(Data([0]), to: missingDirectory) }
     }
 
+    @Test func pngUsesOpaqueAppearanceSpecificBackgrounds() throws {
+        let card = SnippetCard.summary(.init(
+            projectName: "Readable export",
+            updateNotes: "Exported text remains legible in either appearance."
+        ))
+        let lightData = try CardSharingService.pngData(for: card, colorScheme: .light)
+        let darkData = try CardSharingService.pngData(for: card, colorScheme: .dark)
+        let light = try #require(NSBitmapImageRep(data: lightData))
+        let dark = try #require(NSBitmapImageRep(data: darkData))
+        let lightCorner = try #require(light.colorAt(x: 2, y: 2)?.usingColorSpace(.deviceRGB))
+        let darkCorner = try #require(dark.colorAt(x: 2, y: 2)?.usingColorSpace(.deviceRGB))
+
+        #expect(lightCorner.alphaComponent == 1)
+        #expect(darkCorner.alphaComponent == 1)
+        #expect(lightCorner.brightnessComponent > darkCorner.brightnessComponent + 0.5)
+    }
+
     @Test func pngPreservesContentSizeAndAppearance() throws {
         let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 80, pixelsHigh: 40, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
         for y in 0..<40 { for x in 0..<80 { bitmap.setColor(NSColor(deviceRed: 0.1, green: 0.4, blue: 0.9, alpha: 1), atX: x, y: y) } }
