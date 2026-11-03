@@ -4,16 +4,145 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @State private var draft = ReportDraft()
+    @State private var isImportingImage = false
+    @State private var cards: [CardPreviewItem] = []
+    @State private var generatedRevision: DraftRevision?
+    @State private var generationID = UUID()
+
+    private var canGenerate: Bool {
+        draft.canGenerate && !isImportingImage
+    }
+
+    private var hasChanges: Bool {
+        generatedRevision.map { $0 != DraftRevision(draft) } ?? false
+    }
 
     var body: some View {
-        Form {
-            ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
-            MilestoneSection(metric: $draft.milestones)
-            ImageImportSection(image: $draft.image)
+        HSplitView {
+            VStack(spacing: 0) {
+                WorkspaceHeading(title: "Project inputs", subtitle: "Shape your next project update.")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        ProjectInformationSection(name: $draft.projectName, update: $draft.projectUpdate)
+                        Divider()
+                        ProgressInputSection(
+                            method: $draft.progressMethod,
+                            percentage: $draft.estimatedPercentage,
+                            milestones: $draft.milestones,
+                            note: $draft.progressNote
+                        )
+                        Divider()
+                        ImageImportSection(image: $draft.image, isLoading: $isImportingImage)
+                    }
+                    .padding(20)
+                }
+                .accessibilityIdentifier("inputForm")
+                Divider()
+                GenerationControls(
+                    hasProjectInformation: draft.hasProjectInformation,
+                    metricMessage: draft.progressValidationMessage,
+                    isImportingImage: isImportingImage,
+                    canGenerate: canGenerate,
+                    generate: generateCards
+                )
+            }
+            .frame(minWidth: 360, idealWidth: 430, maxWidth: 560)
+            CardPreviewPanel(cards: cards, hasChanges: hasChanges, generationID: generationID)
+                .frame(minWidth: 360, idealWidth: 570, maxWidth: .infinity)
         }
-        .formStyle(.grouped)
         .navigationTitle("Project Reporting Builder")
-        .frame(minWidth: 460, idealWidth: 640, minHeight: 520, idealHeight: 760)
+        .frame(minWidth: 780, idealWidth: 1060, minHeight: 560, idealHeight: 760)
+    }
+
+    private func generateCards() {
+        guard canGenerate else { return }
+        cards = ReportBuilder.build(from: draft).map(CardPreviewItem.init)
+        generatedRevision = DraftRevision(draft)
+        // Recreate the snapshot's accessibility elements when generated values change.
+        generationID = UUID()
+    }
+}
+
+/// Compare editable input without adding UI-only equality requirements to domain models.
+private struct DraftRevision: Equatable {
+    let name: String
+    let update: String
+    let method: ProgressMethod
+    let note: String
+    let percentage: String
+    let completed: String
+    let total: String
+    let imageID: UUID?
+
+    init(_ draft: ReportDraft) {
+        name = draft.projectName
+        update = draft.projectUpdate
+        method = draft.progressMethod
+        note = draft.progressMethod == .none ? "" : draft.progressNote
+        percentage = draft.progressMethod == .percentage ? draft.estimatedPercentage.input : ""
+        completed = draft.progressMethod == .milestones ? draft.milestones.completedInput : ""
+        total = draft.progressMethod == .milestones ? draft.milestones.totalInput : ""
+        imageID = draft.image?.id
+    }
+}
+
+private struct GenerationControls: View {
+    let hasProjectInformation: Bool
+    let metricMessage: LocalizedStringResource?
+    let isImportingImage: Bool
+    let canGenerate: Bool
+    let generate: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if isImportingImage {
+                    Text("Wait for the image to finish importing.")
+                } else if !hasProjectInformation {
+                    Text("Add a project name and update to generate cards.")
+                } else if let metricMessage {
+                    Text(metricMessage)
+                } else {
+                    Text("Ready to generate.")
+                }
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("generationFeedback")
+
+            Button(action: generate) {
+                Label("Generate Cards", systemImage: "rectangle.stack")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.return, modifiers: .command)
+            .disabled(!canGenerate)
+            .help("Generate previews from your current inputs (Command–Return).")
+            .accessibilityIdentifier("generateCards")
+        }
+        .padding(20)
+        .background(.bar)
+    }
+}
+
+struct WorkspaceHeading: View {
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.title2.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            Text(subtitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
     }
 }
 
@@ -22,31 +151,101 @@ private struct ProjectInformationSection: View {
     @Binding var update: String
 
     var body: some View {
-        Section("Project information") {
-            TextField("Project name", text: $name, prompt: Text("e.g. Customer portal rollout"))
-                .accessibilityIdentifier("projectName")
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Project name")
+                    .font(.headline)
+                TextField("Project name", text: $name, prompt: Text("e.g. Customer portal rollout"))
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("projectName")
+            }
             VStack(alignment: .leading, spacing: 8) {
                 Text("Project update")
+                    .font(.headline)
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $update)
-                        .frame(minHeight: 120)
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .frame(height: 180)
+                        .padding(8)
                         .accessibilityLabel("Project update")
                         .accessibilityIdentifier("projectUpdate")
                     if update.isEmpty {
-                        Text("Summarize progress, risks and next steps…")
+                        Text("Progress, risks and next steps…")
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 16)
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
                     }
                 }
+                .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(.secondary.opacity(0.25), lineWidth: 1)
+                }
             }
-            if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                || update.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Enter a project name and update. Your draft stays editable while fields are empty.")
+        }
+    }
+}
+
+private struct ProgressInputSection: View {
+    @Binding var method: ProgressMethod
+    @Binding var percentage: PercentageMetric
+    @Binding var milestones: MilestoneMetric
+    @Binding var note: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Progress · Optional")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            Picker("Reporting method", selection: $method) {
+                Text("Percentage").tag(ProgressMethod.percentage)
+                Text("Milestones").tag(ProgressMethod.milestones)
+                Text("Skip").tag(ProgressMethod.none)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Progress reporting method")
+            .accessibilityIdentifier("progressMethod")
+
+            switch method {
+            case .none:
+                Text("Generate a summary without a KPI card.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            case .percentage:
+                Text("Reported completion (%)")
+                    .font(.subheadline)
+                TextField("Reported completion (%)", text: $percentage.input, prompt: Text("e.g. 62.5"))
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("estimatedPercentage")
+                Text("Self-reported · 0–100%. Use a dot for decimals.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                if let message = percentage.validationMessage {
+                    Text(message)
+                        .font(.callout)
+                        .accessibilityIdentifier("percentageValidation")
+                }
+            case .milestones:
+                MilestoneSection(metric: $milestones)
+            }
+            if method != .none {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What does this progress represent?")
+                        .font(.subheadline)
+                    TextField(
+                        "What does this progress represent?",
+                        text: $note,
+                        prompt: Text("Summarise achievements, remaining work, or blockers..."),
+                        axis: .vertical
+                    )
+                    .lineLimit(3...6)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("What does this progress represent? Optional")
+                    .accessibilityIdentifier("progressNote")
+                }
             }
         }
     }
@@ -56,10 +255,16 @@ private struct MilestoneSection: View {
     @Binding var metric: MilestoneMetric
 
     var body: some View {
-        Section("Milestones") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Completed milestones")
+                .font(.subheadline)
             TextField("Completed milestones", text: $metric.completedInput, prompt: Text("e.g. 3"))
+                .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("completedMilestones")
+            Text("Total milestones")
+                .font(.subheadline)
             TextField("Total milestones", text: $metric.totalInput, prompt: Text("e.g. 10"))
+                .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("totalMilestones")
             if let progress = metric.progress {
                 LabeledContent("Progress") {
@@ -86,12 +291,15 @@ private struct MilestoneSection: View {
 private struct ImageImportSection: View {
     @Binding var image: ImportedImage?
     @State private var isImporterPresented = false
-    @State private var isLoading = false
+    @Binding var isLoading: Bool
     @State private var importError: String?
     @State private var preview: NSImage?
 
     var body: some View {
-        Section("Project image") {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Project image · Optional")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
             Button(image == nil ? "Import image…" : "Replace image…") {
                 isImporterPresented = true
             }

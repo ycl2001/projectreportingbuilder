@@ -13,5 +13,7 @@ struct projectreportingbuilderApp: App {
         WindowGroup {
             ContentView()
         }
+        .defaultSize(width: 1060, height: 760)
+        .windowResizability(.contentMinSize)
     }
 }
