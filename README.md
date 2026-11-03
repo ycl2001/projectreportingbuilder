@@ -65,6 +65,17 @@ In Xcode:
 
 The application target uses automatic code signing. If Xcode requests signing configuration on another machine, select an available development team for local execution.
 
+To verify compilation from the command line:
+
+```sh
+xcodebuild build \
+  -project projectreportingbuilder/projectreportingbuilder.xcodeproj \
+  -scheme projectreportingbuilder \
+  -destination 'platform=macOS'
+```
+
+If no Apple Development signing identity is configured and only compilation needs to be verified, append `CODE_SIGNING_ALLOWED=NO`. Running the application and its UI tests still requires Xcode's normal local signing configuration.
+
 ### Run the tests
 
 Use **Product > Test** (Command-U), or run the suite from the repository root:
