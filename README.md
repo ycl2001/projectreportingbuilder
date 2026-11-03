@@ -27,9 +27,19 @@ The application is intended for project managers, technical program managers, en
   - Confirm before replacing unsaved editor work or deleting a saved report.
   - Keep original-quality image bytes in separately managed local assets.
 
-## Application Screenshots
+## Application Preview
 
-Screenshot assets are not currently committed to this repository. Run the application using the instructions below to review the resizable workspace, unified report preview, appearance options, and Report History. The UI test suite also captures the resized workspace and an exported Summary PNG as test-result attachments.
+### Reporting Workspace
+
+![Reporting workspace](docs/screenshots/reporting-workspace.png)
+
+### Report History
+
+![Report History](docs/screenshots/report-history.png)
+
+### Dark Mode
+
+![Dark Mode](docs/screenshots/dark-mode.png)
 
 ## Getting Started
 
