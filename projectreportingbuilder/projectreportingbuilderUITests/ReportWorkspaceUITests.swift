@@ -178,6 +178,59 @@ final class ReportWorkspaceUITests: XCTestCase {
     }
 
     @MainActor
+    func testHistorySaveProtectionAndDeletion() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        if !app.windows.firstMatch.waitForExistence(timeout: 3) {
+            app.typeKey("n", modifierFlags: .command)
+        }
+
+        let projectName = "History UI \(UUID().uuidString)"
+        replaceText(in: app.textFields["projectName"], with: projectName)
+        replaceText(in: app.textViews["projectUpdate"], with: "Saved history snapshot")
+        app.buttons["generateCards"].click()
+
+        let saveReport = app.buttons["saveReport"]
+        XCTAssertTrue(saveReport.waitForExistence(timeout: 5))
+        XCTAssertTrue(saveReport.isEnabled)
+        saveReport.click()
+        XCTAssertEqual(
+            app.staticTexts["reportSharingFeedback"].value as? String,
+            "Saved this generated report."
+        )
+        XCTAssertFalse(saveReport.isEnabled)
+
+        replaceText(in: app.textViews["projectUpdate"], with: "New unsaved editor work")
+        XCTAssertTrue(app.descendants(matching: .any)["cardsOutOfDate"].exists)
+        XCTAssertFalse(saveReport.isEnabled)
+
+        let history = app.buttons["reportHistory"]
+        XCTAssertTrue(history.waitForExistence(timeout: 5))
+        history.click()
+        XCTAssertTrue(app.descendants(matching: .any)["historyList"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts[projectName].waitForExistence(timeout: 5))
+
+        let duplicate = app.buttons["duplicateSavedReport"]
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
+        duplicate.click()
+        let replaceAndDuplicate = app.buttons["Replace and Duplicate"]
+        XCTAssertTrue(replaceAndDuplicate.waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["Cancel"].firstMatch.click()
+        XCTAssertTrue(replaceAndDuplicate.waitForNonExistence(timeout: 5))
+
+        let historyList = app.descendants(matching: .any)["historyList"]
+        let savedReportEntry = historyList.staticTexts[projectName]
+        app.buttons["deleteSavedReport"].click()
+        let confirmDelete = app.buttons["Delete Saved Report"]
+        XCTAssertTrue(confirmDelete.waitForExistence(timeout: 5), app.debugDescription)
+        confirmDelete.click()
+        XCTAssertTrue(confirmDelete.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(savedReportEntry.waitForNonExistence(timeout: 5))
+        app.buttons["closeHistory"].click()
+    }
+
+    @MainActor
     private func replaceText(in field: XCUIElement, with text: String) {
         clickInput(field)
         field.typeKey("a", modifierFlags: .command)
