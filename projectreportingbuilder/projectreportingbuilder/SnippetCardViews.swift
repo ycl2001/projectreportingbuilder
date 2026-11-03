@@ -43,6 +43,7 @@ struct KPICardView: View {
                     .monospacedDigit()
                     .accessibilityIdentifier("generatedPercentage")
                 ProgressView(value: progress)
+                    .progressViewStyle(CardProgressStyle())
                     .accessibilityLabel("Project completion")
                     .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0...4))))
             } else {
@@ -59,12 +60,13 @@ struct KPICardView: View {
 
 struct ImageCardView: View {
     let card: SnippetCard.ImageContent
+    var preparedImage: NSImage? = nil
     @State private var preview: NSImage?
     @State private var didLoad = false
 
     var body: some View {
         CardSurface(title: "Project image") {
-            if let preview {
+            if let preview = preparedImage ?? preview {
                 Image(nsImage: preview)
                     .resizable()
                     .scaledToFit()
@@ -81,6 +83,7 @@ struct ImageCardView: View {
                 .font(.callout)
         }
         .task(id: card.image.id) {
+            guard preparedImage == nil else { return }
             // Decode only when the attachment changes, not on every body evaluation.
             preview = NSImage(data: card.image.data)
             didLoad = true
@@ -124,5 +127,31 @@ private struct CardText: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+struct SnippetCardContent: View {
+    let card: SnippetCard
+    var preparedImage: NSImage? = nil
+
+    var body: some View {
+        switch card {
+        case .summary(let content): SummaryCardView(card: content)
+        case .kpi(let content): KPICardView(card: content)
+        case .image(let content): ImageCardView(card: content, preparedImage: preparedImage)
+        }
+    }
+}
+
+private struct CardProgressStyle: ProgressViewStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.secondary.opacity(0.2))
+                Capsule().fill(.tint)
+                    .frame(width: geometry.size.width * (configuration.fractionCompleted ?? 0))
+            }
+        }
+        .frame(height: 6)
     }
 }

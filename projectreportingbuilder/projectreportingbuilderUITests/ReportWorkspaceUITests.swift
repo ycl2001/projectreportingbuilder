@@ -24,7 +24,7 @@ final class ReportWorkspaceUITests: XCTestCase {
         generate.click()
         XCTAssertTrue(app.staticTexts["generatedProjectName"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["generatedPercentage"].exists)
-        XCTAssertEqual(app.staticTexts["generatedCardCount"].value as? String, "1 card · Preview only")
+        XCTAssertEqual(app.staticTexts["generatedCardCount"].value as? String, "1 card · Ready to share")
 
         chooseProgress("Milestones", in: app)
         replaceText(in: app.textFields["completedMilestones"], with: "11")
@@ -127,6 +127,48 @@ final class ReportWorkspaceUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["generatedProgressNote"].exists)
         chooseProgress("Percentage", in: app)
         XCTAssertEqual(note.value as? String, "Pilot complete.")
+    }
+
+    @MainActor
+    func testCopyAndExportSummary() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        if !app.windows.firstMatch.waitForExistence(timeout: 3) {
+            app.typeKey("n", modifierFlags: .command)
+        }
+        replaceText(in: app.textFields["projectName"], with: "Sharing verification")
+        clickInput(app.textViews["projectUpdate"])
+        app.textViews["projectUpdate"].typeText("Pilot complete. Next: rollout.")
+        app.buttons["generateCards"].click()
+        app.buttons["copy-summary"].click()
+        XCTAssertEqual(app.staticTexts["sharingFeedback-summary"].value as? String, "Copied text and image.")
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("SharingUI-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        app.buttons["export-summary"].click()
+        let save = app.buttons["Save"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 10), app.debugDescription)
+        app.typeKey("g", modifierFlags: [.command, .shift])
+        app.typeKey("a", modifierFlags: .command)
+        app.typeText(folder.path)
+        app.typeKey(.return, modifierFlags: [])
+        save.click()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+        let success = NSPredicate(format: "value == %@", "Exported Summary.png.")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: success, object: app.staticTexts["sharingFeedback-summary"])], timeout: 10), .completed)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("Summary.png").path))
+        let exported = try Data(contentsOf: folder.appendingPathComponent("Summary.png"))
+        let attachment = XCTAttachment(data: exported, uniformTypeIdentifier: "public.png")
+        attachment.name = "Saved Summary.png"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        try? FileManager.default.removeItem(at: folder)
+        app.buttons["export-summary"].click()
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.click()
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["sharingFeedback-summary"].exists)
     }
 
     @MainActor

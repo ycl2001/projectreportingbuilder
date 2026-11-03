@@ -66,7 +66,7 @@ struct CardPreviewPanel: View {
                             .font(.callout)
                             .accessibilityIdentifier("cardsUpToDate")
                     }
-                    Text(cards.count == 1 ? "1 card · Preview only" : "\(cards.count) cards · Preview only")
+                    Text(cards.count == 1 ? "1 card · Ready to share" : "\(cards.count) cards · Ready to share")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("generatedCardCount")
@@ -95,16 +95,52 @@ struct CardPreviewPanel: View {
 
 private struct CardPreviewRow: View {
     let item: CardPreviewItem
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var feedback: String?
+    @State private var isSharing = false
 
     var body: some View {
-        VStack {
-            switch item.card {
-            case .summary(let card):
-                SummaryCardView(card: card)
-            case .kpi(let card):
-                KPICardView(card: card)
-            case .image(let card):
-                ImageCardView(card: card)
+        VStack(alignment: .leading, spacing: 10) {
+            SnippetCardContent(card: item.card)
+            HStack {
+                Button {
+                    do {
+                        try CardSharingService.copy(item.card, colorScheme: colorScheme)
+                        feedback = "Copied text and image."
+                    } catch {
+                        feedback = "Copy failed: \(error.localizedDescription)"
+                    }
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .accessibilityLabel("Copy \(CardSharingService.title(for: item.card)) card")
+                .accessibilityIdentifier("copy-\(item.id)")
+                Button {
+                    isSharing = true
+                    feedback = nil
+                    Task {
+                        defer { isSharing = false }
+                        do {
+                            if let url = try await CardSharingService.export(item.card, colorScheme: colorScheme) {
+                                feedback = "Exported \(url.lastPathComponent)."
+                            }
+                        } catch {
+                            feedback = "Export failed: \(error.localizedDescription)"
+                        }
+                    }
+                } label: {
+                    Label("Export PNG…", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Export \(CardSharingService.title(for: item.card)) card as PNG")
+                .accessibilityIdentifier("export-\(item.id)")
+            }
+            .disabled(isSharing)
+            if let feedback {
+                Text(feedback)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("sharingFeedback-\(item.id)")
             }
         }
     }
