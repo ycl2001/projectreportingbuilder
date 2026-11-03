@@ -1,6 +1,6 @@
 # Project Reporting Builder
 
-Project Reporting Builder is a native macOS SwiftUI proof of concept created for the Apple IS&T internship technical assessment.
+Project Reporting Builder is a native macOS application that transforms project notes, progress metrics, and images into accessible, modular stakeholder reports. Built with SwiftUI, it supports unified report generation, native sharing, and persistent history to simplify recurring project communication.
 
 ## Project Overview
 
@@ -8,7 +8,7 @@ Enterprise project managers regularly collect narrative updates, progress figure
 
 The application is intended for project managers, technical program managers, engineering leads, and stakeholders who prepare or consume recurring project updates.
 
-## Implemented Features
+## Key Features
 
 - Manual project-name entry and a multiline editor for typed or pasted updates.
 - Optional progress tracking using either a self-reported percentage or completed/total milestones.
@@ -27,21 +27,19 @@ The application is intended for project managers, technical program managers, en
   - Confirm before replacing unsaved editor work or deleting a saved report.
   - Keep original-quality image bytes in separately managed local assets.
 
-## Technology and Architecture
+## Application Preview
 
-The project uses Swift, SwiftUI, and native macOS frameworks only. There are no third-party dependencies and no required cloud backend.
+### Reporting Workspace
 
-The reporting flow is deliberately separated into small types:
+![Reporting workspace](docs/screenshots/reporting-workspace.png)
 
-- [`ReportDraft`](projectreportingbuilder/projectreportingbuilder/ReportDraft.swift) holds editable user input and validation state.
-- [`ReportBuilder`](projectreportingbuilder/projectreportingbuilder/ReportBuilder.swift) deterministically converts a valid draft into modular [`SnippetCard`](projectreportingbuilder/projectreportingbuilder/SnippetCard.swift) values. It does not infer missing progress or rewrite the user's update.
-- [`SnippetCardViews`](projectreportingbuilder/projectreportingbuilder/SnippetCardViews.swift) renders the reusable sections and unified report.
-- [`CardSharingService`](projectreportingbuilder/projectreportingbuilder/CardSharingService.swift) uses `NSPasteboard`, `ImageRenderer`, `NSBitmapImageRep`, and `NSSavePanel` for clipboard and PNG sharing.
-- [`SavedReport`](projectreportingbuilder/projectreportingbuilder/SavedReport.swift) is the Codable snapshot representation.
-- [`ReportStore`](projectreportingbuilder/projectreportingbuilder/ReportStore.swift) stores one JSON record per report under the user's Application Support directory and manages image files separately.
-- [`ReportHistoryView`](projectreportingbuilder/projectreportingbuilder/ReportHistoryView.swift) browses, opens, duplicates, and deletes saved snapshots without mutating the current draft merely to view history.
+### Report History
 
-Generated cards form an immutable preview snapshot. Editing the draft after generation marks the preview as stale; Copy/Export continues to use the visible generated snapshot, and Save Report is disabled until the report is regenerated.
+![Report History](docs/screenshots/report-history.png)
+
+### Dark Mode
+
+![Dark Mode](docs/screenshots/dark-mode.png)
 
 ## Getting Started
 
@@ -89,12 +87,30 @@ The test targets use Swift Testing for unit tests and XCTest/XCUIAutomation for 
 5. Select **Save Report** to store the generated snapshot. Newer ungenerated editor changes are never silently included.
 6. Open **History** to view previous snapshots. Use **Duplicate as New Draft** to load a prior report's inputs, edit them for the next reporting period, and generate a new report without changing the original snapshot.
 
-## Engineering Quality
+## Architecture
+
+The project uses Swift, SwiftUI, and native macOS frameworks only. There are no third-party dependencies and no required cloud backend.
+
+The reporting flow is deliberately separated into small types:
+
+- [`ReportDraft`](projectreportingbuilder/projectreportingbuilder/ReportDraft.swift) holds editable user input and validation state.
+- [`ReportBuilder`](projectreportingbuilder/projectreportingbuilder/ReportBuilder.swift) deterministically converts a valid draft into modular [`SnippetCard`](projectreportingbuilder/projectreportingbuilder/SnippetCard.swift) values. It does not infer missing progress or rewrite the user's update.
+- [`SnippetCardViews`](projectreportingbuilder/projectreportingbuilder/SnippetCardViews.swift) renders the reusable sections and unified report.
+- [`CardSharingService`](projectreportingbuilder/projectreportingbuilder/CardSharingService.swift) uses `NSPasteboard`, `ImageRenderer`, `NSBitmapImageRep`, and `NSSavePanel` for clipboard and PNG sharing.
+- [`SavedReport`](projectreportingbuilder/projectreportingbuilder/SavedReport.swift) is the Codable snapshot representation.
+- [`ReportStore`](projectreportingbuilder/projectreportingbuilder/ReportStore.swift) stores one JSON record per report under the user's Application Support directory and manages image files separately.
+- [`ReportHistoryView`](projectreportingbuilder/projectreportingbuilder/ReportHistoryView.swift) browses, opens, duplicates, and deletes saved snapshots without mutating the current draft merely to view history.
+
+Generated cards form an immutable preview snapshot. Editing the draft after generation marks the preview as stale; Copy/Export continues to use the visible generated snapshot, and Save Report is disabled until the report is regenerated.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full data flow, persistence design, and trade-offs.
+
+## Testing & Engineering Quality
 
 - **Validation:** Project name and update are required. Percentage input is bounded to 0–100; milestone input requires non-negative whole numbers, a total above zero, and completed not exceeding total. Image decoding accepts PNG/JPEG files up to 20 MB and 40 megapixels and reports unsupported or corrupt data.
 - **Reusable architecture:** Input state, deterministic transformation, card rendering, sharing, and persistence are separate types rather than one view-owned implementation.
 - **Snapshot consistency:** Generated output remains stable while the draft changes, stale-preview feedback is displayed, and stale or already-saved previews cannot be saved again.
-- **Accessibility foundations:** Views use semantic system colours, native controls, explicit accessibility labels/identifiers, headers, text alternatives, and keyboard shortcuts. Automated tests exercise identifiers and selected keyboard flows; live VoiceOver usability has not yet been confirmed.
+- **Accessibility foundations:** Views use semantic system colours, native controls, explicit accessibility labels/identifiers, headers, text alternatives, and keyboard shortcuts. Automated tests exercise identifiers and selected keyboard flows.
 - **Local persistence:** Report JSON and managed image assets are written under Application Support. Records are independent, writes avoid overwriting existing report IDs, corrupt records are skipped, and a missing saved image does not prevent usable text/progress sections from opening.
 - **Automated testing:** Unit and UI coverage includes validation, deterministic generation, optional progress, image handling, clipboard representations, light/dark PNG rendering, unified reports, persistence, restart/reload, duplication, deletion, stale-save protection, and responsive workspace behavior.
 
@@ -104,15 +120,25 @@ The test targets use Swift Testing for unit tests and XCTest/XCUIAutomation for 
 
 This is the latest reported full regression result for the `projectreportingbuilder` test plan. It includes parameterized Swift Testing cases and macOS UI tests. See [`REQUIREMENTS.md`](REQUIREMENTS.md) for requirement-level evidence.
 
-## Limitations and Future Work
+## Design Decisions, Validation & Future Work
 
-- AI-assisted reporting is deferred research and is not an implemented capability. Manual input or pasted updates remain the primary ingestion method.
-- There is no cloud sync, account system, collaboration service, or external project-management-tool integration.
-- Live VoiceOver usability verification is not yet confirmed; current accessibility evidence is limited to source review and automated checks.
-- Image text sharing uses the imported filename as its caption; there is no separate editable image-description field.
-- Advanced report templates, historical comparison views, and trend charts are future improvements.
-- The PoC has not undergone production security review, large-scale performance testing, or enterprise deployment validation.
+### Design decisions
 
-## Requirements Traceability
+Project Reporting Builder is a local-first macOS PoC focused on producing reliable stakeholder reports:
 
-[`REQUIREMENTS.md`](REQUIREMENTS.md) maps the assessment scope to source files, acceptance criteria, and automated or manual verification status.
+- **Local persistence:** Reports are saved only on explicit request, using independent Codable JSON records and separately managed image assets under Application Support. This avoids a required backend while keeping saved snapshots reproducible across launches.
+- **Flexible source input:** Project managers can type or paste updates, then optionally add percentage or milestone progress, context, and an image. The workflow accommodates varied reporting formats without forcing an external schema or integration.
+- **Deterministic output:** Validation and `ReportBuilder` generate reports without inventing or rewriting project information. Generated snapshots remain stable until the user explicitly regenerates them.
+- **Reusable Snippet Cards:** Summary, KPI/Progress, and Image sections compose one unified report while remaining independently copyable and exportable.
+
+### Verification boundaries
+
+Automated coverage verifies validation, deterministic generation, sharing, appearance-aware PNG rendering, persistence, history, and core macOS UI flows. Live VoiceOver usability and a complete keyboard-only manual walkthrough remain unverified. Destination-specific clipboard behavior and the complete Light/Dark manual export matrix also require final human validation.
+
+### Possible future enhancements
+
+Potential extensions include editable image captions, optional AI-assisted suggestions with explicit user review, integrations with external project-management or communication tools, custom report templates, and historical comparisons or trend views.
+
+### Deliberately excluded from this PoC
+
+Cloud sync, accounts, multi-user collaboration, and production backend infrastructure are not part of the current implementation. Production security assessment, scalability testing, data-governance review, and enterprise deployment validation are also outside the scope of this technical proof of concept.

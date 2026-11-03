@@ -171,7 +171,7 @@ The following observations come from automation and must not be treated as a com
 - Clipboard tests use isolated `NSPasteboard` instances; destination-specific behavior in Outlook, Teams, Slack, Mail, or other applications remains outside automated coverage.
 - The individual Summary export save-panel flow is automated. Complete-report and every-section save-panel permutations are validated primarily at the rendering/data layer, not through every UI dialog path.
 - Duplicate reconstruction is unit-tested, but the current History UI test cancels the replacement warning rather than accepting it.
-- AI-assisted reporting is deferred and absent from the application. A prior standalone Foundation Models probe reported `.available` but failed minimal inference with `ModelManagerError 1008`; compatible runtime generation was not confirmed. This diagnostic is outside the current product target and does not affect the manual reporting workflow.
+- AI-assisted reporting is deferred and absent from the application, so it is not part of the product regression baseline.
 - Launch performance scaffolding exists, but no production performance target or statistically meaningful performance result is claimed.
 - Persistence tests cover current Codable records; schema migration across future incompatible model versions is not implemented or tested.
 
