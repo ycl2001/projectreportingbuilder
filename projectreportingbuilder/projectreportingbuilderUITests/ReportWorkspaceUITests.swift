@@ -13,6 +13,7 @@ final class ReportWorkspaceUITests: XCTestCase {
         }
         let generate = app.buttons["generateCards"]
         XCTAssertTrue(generate.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(generate.label, "Generate Report")
         XCTAssertFalse(generate.isEnabled)
         XCTAssertTrue(app.descendants(matching: .any)["cardsEmptyState"].exists)
 
@@ -24,7 +25,12 @@ final class ReportWorkspaceUITests: XCTestCase {
         generate.click()
         XCTAssertTrue(app.staticTexts["generatedProjectName"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["generatedPercentage"].exists)
-        XCTAssertEqual(app.staticTexts["generatedCardCount"].value as? String, "1 card · Ready to share")
+        XCTAssertEqual(app.staticTexts["generatedCardCount"].value as? String, "1 section · Ready to share")
+        XCTAssertTrue(app.descendants(matching: .any)["unifiedReportPreview"].exists)
+        XCTAssertTrue(app.staticTexts["Report is up to date"].exists)
+        XCTAssertEqual(app.staticTexts.matching(identifier: "generatedProjectName").count, 1)
+        XCTAssertTrue(app.buttons["copyReport"].exists)
+        XCTAssertTrue(app.buttons["exportReport"].exists)
 
         chooseProgress("Milestones", in: app)
         replaceText(in: app.textFields["completedMilestones"], with: "11")
