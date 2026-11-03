@@ -94,7 +94,7 @@ The test targets use Swift Testing for unit tests and XCTest/XCUIAutomation for 
 - **Validation:** Project name and update are required. Percentage input is bounded to 0–100; milestone input requires non-negative whole numbers, a total above zero, and completed not exceeding total. Image decoding accepts PNG/JPEG files up to 20 MB and 40 megapixels and reports unsupported or corrupt data.
 - **Reusable architecture:** Input state, deterministic transformation, card rendering, sharing, and persistence are separate types rather than one view-owned implementation.
 - **Snapshot consistency:** Generated output remains stable while the draft changes, stale-preview feedback is displayed, and stale or already-saved previews cannot be saved again.
-- **Accessibility foundations:** Views use semantic system colours, native controls, explicit accessibility labels/identifiers, headers, text alternatives, and keyboard shortcuts. Automated tests exercise identifiers and selected keyboard flows; live VoiceOver usability has not yet been confirmed.
+- **Accessibility foundations:** Views use semantic system colours, native controls, explicit accessibility labels/identifiers, headers, text alternatives, and keyboard shortcuts. Automated tests exercise identifiers and selected keyboard flows.
 - **Local persistence:** Report JSON and managed image assets are written under Application Support. Records are independent, writes avoid overwriting existing report IDs, corrupt records are skipped, and a missing saved image does not prevent usable text/progress sections from opening.
 - **Automated testing:** Unit and UI coverage includes validation, deterministic generation, optional progress, image handling, clipboard representations, light/dark PNG rendering, unified reports, persistence, restart/reload, duplication, deletion, stale-save protection, and responsive workspace behavior.
 
@@ -104,14 +104,28 @@ The test targets use Swift Testing for unit tests and XCTest/XCUIAutomation for 
 
 This is the latest reported full regression result for the `projectreportingbuilder` test plan. It includes parameterized Swift Testing cases and macOS UI tests. See [`REQUIREMENTS.md`](REQUIREMENTS.md) for requirement-level evidence.
 
-## Limitations and Future Work
+## Design Decisions, Validation & Future Work
 
-- AI-assisted reporting is deferred research and is not an implemented capability. Manual input or pasted updates remain the primary ingestion method.
-- There is no cloud sync, account system, collaboration service, or external project-management-tool integration.
-- Live VoiceOver usability verification is not yet confirmed; current accessibility evidence is limited to source review and automated checks.
-- Image text sharing uses the imported filename as its caption; there is no separate editable image-description field.
-- Advanced report templates, historical comparison views, and trend charts are future improvements.
-- The PoC has not undergone production security review, large-scale performance testing, or enterprise deployment validation.
+### Design decisions
+
+Project Reporting Builder is a local-first macOS PoC focused on producing reliable stakeholder reports:
+
+- **Local persistence:** Reports are saved only on explicit request, using independent Codable JSON records and separately managed image assets under Application Support. This avoids a required backend while keeping saved snapshots reproducible across launches.
+- **Flexible source input:** Project managers can type or paste updates, then optionally add percentage or milestone progress, context, and an image. The workflow accommodates varied reporting formats without forcing an external schema or integration.
+- **Deterministic output:** Validation and `ReportBuilder` generate reports without inventing or rewriting project information. Generated snapshots remain stable until the user explicitly regenerates them.
+- **Reusable Snippet Cards:** Summary, KPI/Progress, and Image sections compose one unified report while remaining independently copyable and exportable.
+
+### Verification boundaries
+
+Automated coverage verifies validation, deterministic generation, sharing, appearance-aware PNG rendering, persistence, history, and core macOS UI flows. Live VoiceOver usability and a complete keyboard-only manual walkthrough remain unverified. Destination-specific clipboard behavior and the complete Light/Dark manual export matrix also require final human validation.
+
+### Possible future enhancements
+
+Potential extensions include editable image captions, optional AI-assisted suggestions with explicit user review, integrations with external project-management or communication tools, custom report templates, and historical comparisons or trend views.
+
+### Deliberately excluded from this PoC
+
+Cloud sync, accounts, multi-user collaboration, and production backend infrastructure are not part of the current implementation. Production security assessment, scalability testing, data-governance review, and enterprise deployment validation are also outside the scope of this technical proof of concept.
 
 ## Requirements Traceability
 
