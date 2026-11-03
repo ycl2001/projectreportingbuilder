@@ -8,6 +8,8 @@ struct ContentView: View {
     @State private var cards: [CardPreviewItem] = []
     @State private var generatedRevision: DraftRevision?
     @State private var generationID = UUID()
+    @State private var savedGenerationID: UUID?
+    @State private var isHistoryPresented = false
 
     private var canGenerate: Bool {
         draft.canGenerate && !isImportingImage
@@ -15,6 +17,22 @@ struct ContentView: View {
 
     private var hasChanges: Bool {
         generatedRevision.map { $0 != DraftRevision(draft) } ?? false
+    }
+
+    private var canSaveGeneratedReport: Bool {
+        ReportSaveEligibility.canSave(
+            hasGeneratedPreview: !cards.isEmpty,
+            isStale: hasChanges,
+            alreadySaved: savedGenerationID == generationID
+        )
+    }
+
+    private var requiresDuplicateConfirmation: Bool {
+        DraftReplacementProtection.requiresConfirmation(
+            currentDraft: draft,
+            generatedRevision: generatedRevision,
+            generatedPreviewIsSaved: savedGenerationID == generationID
+        )
     }
 
     var body: some View {
@@ -47,24 +65,67 @@ struct ContentView: View {
                 )
             }
             .frame(minWidth: 360, idealWidth: 430, maxWidth: 560)
-            CardPreviewPanel(cards: cards, hasChanges: hasChanges, generationID: generationID)
+            CardPreviewPanel(
+                cards: cards,
+                hasChanges: hasChanges,
+                generationID: generationID,
+                canSaveReport: canSaveGeneratedReport,
+                saveReport: saveGeneratedReport
+            )
                 .frame(minWidth: 360, idealWidth: 570, maxWidth: .infinity)
         }
         .navigationTitle("Project Reporting Builder")
+        .toolbar {
+            ToolbarItem {
+                Button {
+                    isHistoryPresented = true
+                } label: {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+                .help("Browse saved reports.")
+                .accessibilityIdentifier("reportHistory")
+            }
+        }
+        .sheet(isPresented: $isHistoryPresented) {
+            ReportHistoryView(
+                requiresReplacementConfirmation: requiresDuplicateConfirmation,
+                duplicateDraft: replaceWithDuplicate
+            )
+        }
         .frame(minWidth: 780, idealWidth: 1060, minHeight: 560, idealHeight: 760)
     }
 
     private func generateCards() {
         guard canGenerate else { return }
-        cards = ReportBuilder.build(from: draft).map(CardPreviewItem.init)
+        var previewItems: [CardPreviewItem] = []
+        for card in ReportBuilder.build(from: draft) {
+            previewItems.append(CardPreviewItem(card))
+        }
+        cards = previewItems
         generatedRevision = DraftRevision(draft)
+        savedGenerationID = nil
         // Recreate the snapshot's accessibility elements when generated values change.
+        generationID = UUID()
+    }
+
+    private func saveGeneratedReport() throws {
+        guard canSaveGeneratedReport else { throw ReportStore.StoreError.invalidSnapshot }
+        let store = try ReportStore()
+        try store.save(cards: cards.map(\.card))
+        savedGenerationID = generationID
+    }
+
+    private func replaceWithDuplicate(_ replacement: ReportDraft) {
+        draft = replacement
+        cards = []
+        generatedRevision = nil
+        savedGenerationID = nil
         generationID = UUID()
     }
 }
 
 /// Compare editable input without adding UI-only equality requirements to domain models.
-private struct DraftRevision: Equatable {
+struct DraftRevision: Equatable {
     let name: String
     let update: String
     let method: ProgressMethod
@@ -83,6 +144,36 @@ private struct DraftRevision: Equatable {
         completed = draft.progressMethod == .milestones ? draft.milestones.completedInput : ""
         total = draft.progressMethod == .milestones ? draft.milestones.totalInput : ""
         imageID = draft.image?.id
+    }
+
+    var hasContent: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !update.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || method != .none
+            || !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !percentage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !completed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !total.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || imageID != nil
+    }
+}
+
+enum ReportSaveEligibility {
+    static func canSave(hasGeneratedPreview: Bool, isStale: Bool, alreadySaved: Bool) -> Bool {
+        hasGeneratedPreview && !isStale && !alreadySaved
+    }
+}
+
+enum DraftReplacementProtection {
+    static func requiresConfirmation(
+        currentDraft: ReportDraft,
+        generatedRevision: DraftRevision?,
+        generatedPreviewIsSaved: Bool
+    ) -> Bool {
+        let currentRevision = DraftRevision(currentDraft)
+        guard currentRevision.hasContent else { return false }
+        guard let generatedRevision else { return true }
+        return currentRevision != generatedRevision || !generatedPreviewIsSaved
     }
 }
 

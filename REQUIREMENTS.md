@@ -1,344 +1,108 @@
-# Project Reporting Builder — Proof of Concept Requirements
+# Project Reporting Builder — Requirements Traceability
 
-> **Project type:** Apple IS&T take-home assessment · macOS proof of concept (PoC)  
-> **Planned implementation:** Swift + SwiftUI  
-> **Delivery window:** 2–4 November 2026 (three days; confirm the recruiter's exact submission time)  
-> **Document status:** Implementation requirements derived from the supplied assessment brief
+## 1. Assessment Scope
 
-## 1. Assessment brief
+The assessment asks for a lightweight, responsive web or macOS proof of concept that:
 
-Build a lightweight, responsive **Project Reporting Builder** that helps enterprise users transform diverse project updates into modular, visually polished, accessible **Snippet Cards** that can be copied or exported for sharing in email or messaging tools.
+- Ingests raw text, numerical metric data, and image assets.
+- Transforms those inputs into modular, visually polished Snippet Cards.
+- Supports immediate copying or export for reuse in messaging and email.
+- Addresses accessibility compliance expectations in the interface and shared output.
+- Demonstrates engineering quality through documentation, configuration, tests, and consistent coding conventions.
+- May include optional visual polish, cloud concepts, or innovative enhancements where time permits.
 
-The recruiter explicitly requests:
+Project Reporting Builder addresses the brief as a native macOS SwiftUI application. Cloud services and AI are not required for its implemented workflow.
 
-1. A **working PoC** implemented as either a web or macOS tool.
-2. Support for **raw text, metric data, and image assets**.
-3. Transformation of the inputs into **modular Snippet Cards**.
-4. **Visually polished, accessible** card output and a responsive interface.
-5. The ability to **copy or export** cards for direct sharing.
-6. A **15-minute English presentation** explaining the design, ideas, and implementation.
-7. Evidence of **engineering excellence**, including documentation, configuration, testing, and coding conventions.
+## 2. Status Definitions
 
-**Good-to-have (not mandatory):** styled UI, consideration of cloud deployment technologies, and thoughtful enhancements that surprise and delight users.
+| Status | Meaning |
+| --- | --- |
+| **Implemented and verified** | Present in source and covered by relevant automated tests or the latest completed regression run. |
+| **Implemented; manual validation pending** | Present in source, but the remaining behavior requires human interaction or assistive-technology review not demonstrated by current automated evidence. |
+| **Deferred / out of scope** | Intentionally not implemented in this proof of concept. |
 
-## 2. Problem statement
+## 3. Functional Requirements Matrix
 
-Project managers and cross-functional teams receive updates as scattered notes, performance numbers, and screenshots. Preparing a consistent progress report requires manual formatting and repeated copying between tools.
+| Requirement ID | Description | Implementation | Status | Verification evidence |
+| --- | --- | --- | --- | --- |
+| FR-01 | Accept a project name and typed or pasted project update; require both before generation and preserve the supplied text. | `ReportDraft` owns raw input and `ContentView` provides native text controls. `ReportBuilder` carries the text into the Summary card without rewriting it. | **Implemented and verified** | [`ReportDraft.swift`](projectreportingbuilder/projectreportingbuilder/ReportDraft.swift), [`ContentView.swift`](projectreportingbuilder/projectreportingbuilder/ContentView.swift), [`ReportBuilderTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportBuilderTests.swift), [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) |
+| FR-02 | Support optional percentage or milestone progress, contextual notes, deterministic calculations, and clear invalid-input feedback. | `PercentageMetric` validates 0–100. `MilestoneMetric` validates digit-only whole numbers, nonzero total, bounds, and completed ≤ total. Only the selected valid metric generates a KPI card. | **Implemented and verified** | [`PercentageMetric.swift`](projectreportingbuilder/projectreportingbuilder/PercentageMetric.swift), [`ReportDraft.swift`](projectreportingbuilder/projectreportingbuilder/ReportDraft.swift), [`OptionalProgressTests.swift`](projectreportingbuilder/projectreportingbuilderTests/OptionalProgressTests.swift), [`projectreportingbuilderTests.swift`](projectreportingbuilder/projectreportingbuilderTests/projectreportingbuilderTests.swift) |
+| FR-03 | Import and preview a local PNG or JPEG while handling cancellation, replacement, unsupported data, and excessive size safely. | The native file importer delegates to `ImageImportService`; decoded original bytes and filename are retained. Limits are 20 MB and 40 megapixels. | **Implemented and verified** | [`ImageImportService.swift`](projectreportingbuilder/projectreportingbuilder/ImageImportService.swift), [`ContentView.swift`](projectreportingbuilder/projectreportingbuilder/ContentView.swift), [`projectreportingbuilderTests.swift`](projectreportingbuilder/projectreportingbuilderTests/projectreportingbuilderTests.swift), [`ReportInputUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportInputUITests.swift) |
+| FR-04 | Generate modular Summary, KPI/Progress, and Image Snippet Cards from the corresponding user inputs. | `ReportBuilder` creates a Summary, optionally one valid KPI, and optionally one Image card using the `SnippetCard` model and reusable rendering views. | **Implemented and verified** | [`ReportBuilder.swift`](projectreportingbuilder/projectreportingbuilder/ReportBuilder.swift), [`SnippetCard.swift`](projectreportingbuilder/projectreportingbuilder/SnippetCard.swift), [`SnippetCardViews.swift`](projectreportingbuilder/projectreportingbuilder/SnippetCardViews.swift), [`ReportBuilderTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportBuilderTests.swift) |
+| FR-05 | Provide a resizable two-pane workspace and a unified report preview with one project title and conditional Summary, Progress, and Image sections. | `ContentView` uses `HSplitView`; `UnifiedReportView` composes the generated Snippet Cards with shared spacing and dividers. | **Implemented and verified** | [`ContentView.swift`](projectreportingbuilder/projectreportingbuilder/ContentView.swift), [`SnippetCardViews.swift`](projectreportingbuilder/projectreportingbuilder/SnippetCardViews.swift), [`UnifiedReportTests.swift`](projectreportingbuilder/projectreportingbuilderTests/UnifiedReportTests.swift), resize coverage in [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) |
+| FR-06 | Copy and export both the complete report and individual Snippet Cards. | `CardSharingService` creates plain-text, RTF, and PNG clipboard representations and exports opaque PNG files through `NSSavePanel`. | **Implemented and verified** | [`CardSharingService.swift`](projectreportingbuilder/projectreportingbuilder/CardSharingService.swift), [`CardSharingTests.swift`](projectreportingbuilder/projectreportingbuilderTests/CardSharingTests.swift), [`UnifiedReportTests.swift`](projectreportingbuilder/projectreportingbuilderTests/UnifiedReportTests.swift), [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) |
+| FR-07 | Follow System appearance by default and persist optional Light or Dark overrides; keep exported PNGs legible in both appearances. | `AppAppearance` is stored with `@AppStorage`. Semantic colours drive views and explicit opaque backgrounds drive image rendering. | **Implemented and verified** | [`projectreportingbuilderApp.swift`](projectreportingbuilder/projectreportingbuilder/projectreportingbuilderApp.swift), [`AccessibleColors.swift`](projectreportingbuilder/projectreportingbuilder/AccessibleColors.swift), [`AppearanceTests.swift`](projectreportingbuilder/projectreportingbuilderTests/AppearanceTests.swift), [`CardSharingTests.swift`](projectreportingbuilder/projectreportingbuilderTests/CardSharingTests.swift), [`UnifiedReportTests.swift`](projectreportingbuilder/projectreportingbuilderTests/UnifiedReportTests.swift) |
+| FR-08 | Keep generated output consistent with the inputs used at generation time, indicate later edits, and prevent stale snapshots from being saved. | `DraftRevision` tracks generated inputs. Sharing reads immutable generated cards, stale feedback is shown, and `ReportSaveEligibility` requires a fresh, unsaved preview. | **Implemented and verified** | [`ContentView.swift`](projectreportingbuilder/projectreportingbuilder/ContentView.swift), [`CardPreviewPanel.swift`](projectreportingbuilder/projectreportingbuilder/CardPreviewPanel.swift), [`ReportHistoryTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportHistoryTests.swift), [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) |
+| FR-09 | Persist explicitly saved generated-report snapshots locally, list them newest first, and preserve managed image assets across store recreation. | `SavedReport` is Codable. `ReportStore` writes independent JSON records and separate image assets under Application Support; no automatic saving occurs. | **Implemented and verified** | [`SavedReport.swift`](projectreportingbuilder/projectreportingbuilder/SavedReport.swift), [`ReportStore.swift`](projectreportingbuilder/projectreportingbuilder/ReportStore.swift), [`ReportStoreTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportStoreTests.swift) |
+| FR-10 | Duplicate a saved report into a new editable draft without mutating its original snapshot, and warn before replacing unsaved editor work. | `ReportStore.draftForEditing` reconstructs the draft; `ReportHistoryView` requests confirmation when `DraftReplacementProtection` detects current work and clears generated output after replacement. | **Implemented; manual validation pending** | Conversion, lifecycle, and protection logic are covered by [`ReportStoreTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportStoreTests.swift) and [`ReportHistoryTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportHistoryTests.swift). [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) verifies that the warning appears and can be cancelled; accepting the UI replacement remains a manual check. |
+| FR-11 | Open saved reports read-only with supported Copy/Export actions and delete a selected report only after confirmation. | `ReportHistoryView` displays `ReportStore.ViewSnapshot` without replacing the editor. `ReportStore.delete` removes the selected record and its report-owned image. Missing images produce a controlled warning while usable sections remain available. | **Implemented and verified** | [`ReportHistoryView.swift`](projectreportingbuilder/projectreportingbuilder/ReportHistoryView.swift), [`ReportStoreTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportStoreTests.swift), deletion flow in [`ReportWorkspaceUITests.swift`](projectreportingbuilder/projectreportingbuilderUITests/ReportWorkspaceUITests.swift) |
 
-**The PoC aims to demonstrate that a user can turn these three input types into consistent, reusable reporting cards through one lightweight workflow.**
+## 4. Non-functional Requirements
 
-### Target user
+| Requirement ID | Area | Requirement and implementation | Status | Evidence / remaining validation |
+| --- | --- | --- | --- | --- |
+| NFR-01 | Accessibility | Use native controls, semantic colours, meaningful labels/identifiers, text equivalents, keyboard shortcuts, and output that is not colour-only. | **Implemented; manual validation pending** | Accessibility labels and identifiers appear throughout [`ContentView.swift`](projectreportingbuilder/projectreportingbuilder/ContentView.swift), [`CardPreviewPanel.swift`](projectreportingbuilder/projectreportingbuilder/CardPreviewPanel.swift), and [`ReportHistoryView.swift`](projectreportingbuilder/projectreportingbuilder/ReportHistoryView.swift). XCUI tests exercise identifiers and Command-Return. A live VoiceOver usability pass is not yet confirmed. |
+| NFR-02 | Reliability | Empty or invalid input, corrupt images, cancelled export, missing history assets, and corrupt records must fail safely with usable feedback. | **Implemented and verified** | Validation and failure paths are covered by [`projectreportingbuilderTests.swift`](projectreportingbuilder/projectreportingbuilderTests/projectreportingbuilderTests.swift), [`CardSharingTests.swift`](projectreportingbuilder/projectreportingbuilderTests/CardSharingTests.swift), and [`ReportStoreTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportStoreTests.swift). |
+| NFR-03 | Usability | Keep primary input, generation, sharing, and history actions discoverable in a resizable macOS workspace. | **Implemented; manual validation pending** | Native controls, toolbar History action, empty states, progress feedback, and minimum-size UI automation are present. Broader keyboard-only and assistive-technology walkthroughs remain manual. |
+| NFR-04 | Maintainability | Separate editable state, validation, deterministic transformation, view rendering, sharing, and persistence; avoid third-party dependencies. | **Implemented and verified** | `ReportDraft`, `ReportBuilder`, `SnippetCard`, `CardSharingService`, and `ReportStore` provide explicit boundaries. The Xcode project declares no package dependencies. |
+| NFR-05 | Data integrity | Save only generated snapshots, avoid ID overwrite, retain original input values and image bytes, and isolate deletion to one report. | **Implemented and verified** | [`ReportStore.swift`](projectreportingbuilder/projectreportingbuilder/ReportStore.swift), [`ReportHistoryTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportHistoryTests.swift), and [`ReportStoreTests.swift`](projectreportingbuilder/projectreportingbuilderTests/ReportStoreTests.swift). |
+| NFR-06 | Local data handling | Process report inputs locally and store history in the user's Application Support directory; do not require external APIs or a backend. | **Implemented and verified by source inspection** | [`ReportStore.swift`](projectreportingbuilder/projectreportingbuilder/ReportStore.swift), [`ImageImportService.swift`](projectreportingbuilder/projectreportingbuilder/ImageImportService.swift), and the Xcode project configuration. This is not a production security or privacy certification. |
+| NFR-07 | Portability / deployment | Build as a native macOS application using the shared scheme and documented toolchain baseline. | **Implemented and verified** | [`project.xcproj`](projectreportingbuilder/projectreportingbuilder.xcodeproj/project.xcproj) configures macOS 27.0, Swift, Debug/Release configurations, and native app/test targets; the project was last upgraded with Xcode 27.2. |
+| NFR-08 | Testability | Keep calculations and storage deterministic, inject temporary store roots in tests, and cover core user flows with unit and UI tests. | **Implemented and verified** | Tests reside in [`projectreportingbuilderTests`](projectreportingbuilder/projectreportingbuilderTests) and [`projectreportingbuilderUITests`](projectreportingbuilder/projectreportingbuilderUITests). Latest reported result: **106 passed, 0 failed, 0 skipped**. |
 
-An enterprise project manager, product manager, or engineering team lead preparing a weekly status report for stakeholders.
+## 5. Acceptance Criteria
 
-### Primary user story
-
-> As a project manager, I want to enter project notes, milestone metrics, and an image so that I can generate polished reporting cards and share them without manually laying out the report.
-
-## 3. Scope and priorities
-
-The implementation below is the **chosen three-day PoC scope**, not an additional set of obligations stated by Apple.
-
-| Priority | Scope | Decision |
+| Requirement | Measurable acceptance criteria | Status |
 | --- | --- | --- |
-| P0 — Required for demo | Input raw notes, metric data, and one image | Implement |
-| P0 — Required for demo | Produce three reusable card types | Implement |
-| P0 — Required for demo | Working card copy **or** export into a usable format | Implement |
-| P0 — Required for demo | Input validation, basic accessibility, responsive layout | Implement |
-| P0 — Required for demo | Basic automated tests, README, reproducible setup | Implement |
-| P0 — Required for submission | 15-minute presentation and live demo | Prepare |
-| P1 — Strongly preferred | Both plain-text copy and PNG export | Implement if core P0 is stable |
-| P1 — Preferred | Editing input and regenerating a card | Implement |
-| P2 — Optional | Additional card styles, themes, custom templates | Defer |
-| P2 — Optional | AI-assisted summarisation / agentic workflow | Defer; describe future approach |
-| Out of scope | Login, enterprise database, collaboration, cloud backend, PDF generation | Do not build |
-
-## 4. Functional requirements
-
-### FR-01 — Text input
-
-- Provide a multiline field for raw project progress notes.
-- Preserve the user's entered content without inventing new facts.
-- Support editing and regenerating the summary card.
-- Handle empty input gracefully (show guidance or omit that card).
-
-**Acceptance criteria**
-
-- [ ] A user can type or paste project notes.
-- [ ] Generating a Summary Card reflects the entered content.
-- [ ] Changing the notes updates the card when regenerated.
-- [ ] Empty input does not cause a crash or misleading content.
-
-### FR-02 — Metric input
-
-- Accept a metric title, completed value, and total value.
-- Calculate and display a percentage when the total is greater than zero.
-- Reject or clearly explain invalid values (e.g., nonnumeric, negative, completed > total, or total = 0 for progress calculations).
-- Show both the percentage and original numbers so information is not conveyed by colour alone.
-
-**Acceptance criteria**
-
-- [ ] Input of `12` completed and `15` total displays `80%` and `12 of 15`.
-- [ ] Editing the values changes the rendered result.
-- [ ] Invalid values receive a clear message and do not generate an incorrect progress result.
-
-### FR-03 — Image ingestion
-
-- Let the user select a local PNG or JPEG image.
-- Preview the image in an Image Card.
-- Support an editable image caption or description.
-- Handle cancellation and invalid files without crashing.
-
-**Acceptance criteria**
-
-- [ ] A user can select a supported local image.
-- [ ] The card displays the selected image and caption.
-- [ ] The caption remains available in text-based sharing output.
-
-### FR-04 — Snippet Card generation
-
-Implement three modular templates:
-
-1. **Summary Card:** project title or update heading plus text content.
-2. **KPI/Progress Card:** metric label, current/total values, calculated percentage, and progress indicator.
-3. **Image Card:** uploaded visual with a caption.
-
-Use deterministic transformations and reusable data models. AI is **not required** for the PoC.
-
-**Acceptance criteria**
-
-- [ ] The user can generate a card from each of the three input types.
-- [ ] Cards display the corresponding user-supplied information accurately.
-- [ ] Cards have consistent spacing, type hierarchy, and styling.
-- [ ] A missing input does not prevent other valid cards from rendering.
-
-### FR-05 — Preview and responsive layout
-
-- Use one macOS application window with an input area and a card-preview area.
-- Accommodate window resizing by adapting widths, wrapping, or stacking content as appropriate.
-- Avoid clipped essential content at the supported minimum window size.
-
-**Acceptance criteria**
-
-- [ ] Inputs and cards are visible in a normal desktop window.
-- [ ] The layout remains usable when the window is resized.
-- [ ] Longer notes wrap or scroll appropriately rather than overflowing.
-
-### FR-06 — Copy and export
-
-- **Minimum demonstration:** offer a real Copy **or** Export function for a generated card.
-- **Planned PoC implementation:** copy a clear plain-text representation; if time allows, also export the rendered card as a PNG.
-- Preserve the critical text, labels, values, and image captions in the text fallback.
-- Allow users to save a PNG to a chosen location if PNG export is implemented.
-- Show understandable feedback when copying or exporting fails.
-
-**Acceptance criteria**
-
-- [ ] Copying a Summary or KPI card produces accurate, readable clipboard content.
-- [ ] Pasting the clipboard content into a test destination (e.g., Notes or an email draft) works.
-- [ ] If PNG export is implemented, the saved file opens and reflects the selected card.
-- [ ] Any limitations in destination compatibility are documented.
-
-## 5. Non-functional requirements
-
-### NFR-01 — Accessibility
-
-- Add meaningful labels and accessible names to form controls and actions.
-- Support keyboard navigation, including visible focus where applicable.
-- Use legible typography and adequate contrast; do not rely on colour alone.
-- Provide text alternatives or captions for meaningful image content.
-- Test core flows with VoiceOver and keyboard interaction.
-- Consider accessible output: a PNG alone is not an equivalent substitute for text-based sharing.
-
-**Acceptance criteria**
-
-- [ ] Core controls have understandable accessible labels.
-- [ ] The main flow can be completed using a keyboard.
-- [ ] Key information remains available as text.
-
-### NFR-02 — Reliability and validation
-
-- Do not crash on empty text, invalid numeric input, cancelled file selection, or export failure.
-- Keep numeric calculations deterministic and testable.
-- Show user-facing error messages for recoverable failures.
-
-### NFR-03 — Maintainability
-
-- Separate input views, card models, transformation logic, and clipboard/export services.
-- Use clear Swift naming and consistent coding conventions.
-- Keep business logic out of large view bodies where practical.
-- Avoid hardcoded secrets and unnecessary third-party dependencies.
-
-### NFR-04 — Privacy and security
-
-- Process inputs locally for this PoC.
-- Do not upload user-entered content or images to a remote service.
-- Avoid logging potentially sensitive report content.
-- Use fabricated demo project information rather than real confidential material.
-
-### NFR-05 — Performance
-
-- Card generation and preview updates should feel immediate with typical short project updates and reasonable image sizes.
-- No quantitative production performance service-level objective is claimed for the PoC.
-
-## 6. Proposed technical architecture
-
-**Platform:** macOS  
-**Language:** Swift  
-**UI:** SwiftUI  
-**Clipboard:** `NSPasteboard` (AppKit interop)  
-**Image selection:** native file importer / file picker  
-**PNG output:** SwiftUI render-to-image approach as supported by the target macOS SDK  
-**Tests:** Swift Testing or XCTest  
-**Source control:** Git / GitHub
-
-```text
-User input (notes, numbers, image)
-              |
-              v
-     Validation + data models
-              |
-              v
-    Deterministic card builder
-              |
-              v
-    Reusable SwiftUI card views
-              |
-       +------+------+
-       |             |
-   Clipboard      PNG export
-   (text)         (if built)
-```
-
-### Suggested repository structure
-
-```text
-ProjectReportingBuilder/
-├── README.md
-├── REQUIREMENTS.md
-├── ProjectReportingBuilder.xcodeproj
-├── ProjectReportingBuilder/
-│   ├── App/
-│   ├── Models/
-│   ├── Views/
-│   └── Services/
-├── ProjectReportingBuilderTests/
-└── Docs/
-    ├── Architecture.md
-    └── TestPlan.md
-```
-
-> Adapt the folder structure to the real Xcode project; avoid creating empty files solely to match this diagram.
-
-## 7. Testing requirements
-
-### Automated tests (minimum)
-
-| Test ID | Scenario | Expected result |
-| --- | --- | --- |
-| T-01 | 12 completed / 15 total | 80%, showing original values |
-| T-02 | Completed > total or total = 0 | Validation result, no misleading percentage |
-| T-03 | Nonempty project notes | Summary Card retains supplied content |
-| T-04 | Empty notes | Safe empty state or card omitted |
-
-### Manual acceptance tests
-
-- [ ] Launch the app following README instructions.
-- [ ] Enter text, metrics, and an image; generate three accurate cards.
-- [ ] Change inputs and regenerate without stale information.
-- [ ] Copy content and paste into Notes or an email draft.
-- [ ] If implemented, export a PNG and reopen the file.
-- [ ] Resize the window and verify no critical clipping.
-- [ ] Navigate the essential flow using a keyboard and VoiceOver.
-- [ ] Verify errors for unsupported images and invalid metrics.
-
-## 8. Three-day implementation plan
-
-### Day 1 — Monday, 2 November: working vertical slice
-
-- [ ] Initialise Xcode project and Git repository.
-- [ ] Define minimal models and validation rules.
-- [ ] Create raw text, metric, and image input controls.
-- [ ] Create Summary, KPI, and Image Card views.
-- [ ] Connect inputs to a Generate action and card preview.
-- [ ] Confirm all three input types display correctly; commit working code.
-
-**Exit criterion:** a user can enter all three input types and produce three non-hardcoded cards.
-
-### Day 2 — Tuesday, 3 November: sharing and testing
-
-- [ ] Implement and verify clipboard output.
-- [ ] Implement PNG export if feasible without risking the minimum workflow.
-- [ ] Add numeric validation and error states.
-- [ ] Write and run key unit tests.
-- [ ] Check resized layouts, keyboard access, and basic VoiceOver labels.
-- [ ] Freeze features after the end-to-end workflow works.
-
-**Exit criterion:** card output is shareable outside the application, with tested core logic.
-
-### Day 3 — Wednesday, 4 November: delivery and presentation
-
-- [ ] Run a final regression pass and fix critical issues.
-- [ ] Finish README and technical design/limitations documentation.
-- [ ] Capture screenshots and a fallback demo recording if feasible.
-- [ ] Create six or seven presentation slides.
-- [ ] Rehearse a 15-minute English presentation.
-- [ ] Verify a clean build, repository contents, and submission materials.
-
-**Exit criterion:** a reviewer can run, understand, and evaluate the PoC and watch a complete demonstration.
-
-## 9. Presentation requirements (15 minutes, English)
-
-| Segment | Time | Evidence |
-| --- | ---: | --- |
-| Problem and enterprise user | 1:30 | Reporting pain point and user story |
-| Product vision and scoped solution | 1:30 | Intended workflow and design decisions |
-| Live demo | 5:00 | Input → Generate → Copy/Export |
-| Architecture and trade-offs | 3:00 | Data flow, modularity, platform choice |
-| Engineering excellence | 2:00 | Tests, accessibility, configuration, documentation |
-| Limitations, roadmap, conclusion | 2:00 | Honest PoC boundaries and next priorities |
-| **Total** | **15:00** | |
-
-### Suggested demo data
-
-- **Project:** Atlas Mobile Release
-- **Notes:** Sprint 4 completed; security approval remains pending; next step is regression testing.
-- **Metric:** 12 out of 15 milestones completed (80%).
-- **Image:** a fabricated product screenshot with a descriptive caption.
-
-### Potential follow-up questions
-
-Be ready to explain why SwiftUI was chosen, how the metric is validated, how sharing was tested, what accessibility considerations apply to PNG output, and what would change for enterprise production deployment.
-
-## 10. Submission checklist
-
-- [ ] Runnable macOS SwiftUI PoC.
-- [ ] Accessible project source code in GitHub or the specified submission channel.
-- [ ] `README.md` with setup, run, test, and known-limitations instructions.
-- [ ] `REQUIREMENTS.md` describing scope and acceptance criteria.
-- [ ] Automated test results or clear test instructions.
-- [ ] Architecture diagram or concise design explanation.
-- [ ] Presentation deck and prepared 15-minute English walkthrough.
-- [ ] Demo data and optional backup video.
-
-## 11. Explicitly deferred work
-
-The following are **not required for this three-day PoC** and should be discussed only as possible future improvements:
-
-- AI-generated summaries, multi-agent orchestration, and external LLM integrations.
-- Cloud hosting or backend services.
-- Authentication, role-based access, and team collaboration.
-- Persistent multi-project storage and report history.
-- PDF, Word, PowerPoint, and comprehensive rich-HTML export.
-- Integration with Jira, Slack, Teams, or enterprise email services.
-- Production security review, large-scale performance testing, and enterprise rollout.
-
-## 12. Success definition
-
-The PoC is successful if a reviewer can **enter raw text, a metric, and an image; generate accurate, consistent and accessible reporting cards; and use at least one working sharing mechanism to reuse the output outside the app**.
-
-It should also be straightforward to explain **how the code is organised, what was tested, why trade-offs were made, and what is intentionally not production-ready**.
-
----
-
-*Requirement interpretation note: The assessment permits web **or** macOS. SwiftUI, three specific card templates, and the proposed implementation order are project choices designed for the three-day timeline, not explicit recruiter mandates.*
+| FR-01 | Generation remains disabled until non-whitespace project name and update are present; the generated Summary preserves both values. | **Verified by unit and UI tests** |
+| FR-02 | Progress may be skipped. A percentage from 0–100 is accepted. Milestones such as 12/15 render 80% and “12 of 15”; invalid, negative, zero-total, non-integer, oversized, or completed-over-total input cannot produce a misleading KPI. | **Verified by parameterized unit tests and UI tests** |
+| FR-03 | A valid PNG or JPEG up to 20 MB and 40 megapixels can be imported, previewed, replaced, and retained after the source is unavailable; corrupt, unsupported, or oversized input returns a controlled error. | **Verified by unit and UI tests** |
+| FR-04 | A generated report always contains Summary and adds KPI and Image sections only when corresponding valid input exists. No missing category blocks another valid section. | **Verified by unit tests** |
+| FR-05 | Summary-only, Summary+Progress, and Summary+Progress+Image reports render under one project title; essential controls remain reachable at the supported minimum window size. | **Verified by unit and UI tests** |
+| FR-06 | Copy produces readable text plus RTF and PNG clipboard representations. Complete reports and individual sections produce decodable PNG output; save-panel export writes the selected PNG atomically. | **Verified by unit tests; individual Summary save-panel flow verified by UI test** |
+| FR-07 | System maps to no forced colour scheme, Light/Dark overrides persist, and light/dark exported PNGs use legible opaque backgrounds. | **Verified by unit tests; final visual review remains advisable** |
+| FR-08 | Editing after generation leaves the visible snapshot unchanged, shows stale state, and disables Save Report until regeneration. Repeated saving of the same generation is disabled. | **Verified by unit and UI tests** |
+| FR-09 | Saved reports survive `ReportStore` reinitialisation, appear newest first, preserve optional progress/note values, and keep image bytes outside JSON records. | **Verified by unit tests** |
+| FR-10 | Duplicating reconstructs project text, selected progress mode, raw metric inputs, note, and image; editing and saving the duplicate creates another record while the original remains unchanged. Unsaved editor work requires confirmation before replacement. | **Logic verified; accepting the replacement in the live UI requires manual confirmation** |
+| FR-11 | Selecting history opens a read-only snapshot without changing the current editor; Copy/Export remains available. Delete requires confirmation, removes only the selected record and its managed image, and leaves other reports intact. | **Verified by unit/UI tests; read-only Copy/Export should also receive a manual destination check** |
+
+## 6. Requirement Status Summary
+
+### Implemented and verified
+
+- Manual project input, optional validated metrics, progress notes, and PNG/JPEG ingestion.
+- Modular Snippet Cards and unified report composition.
+- Individual and complete-report clipboard/PNG sharing.
+- Persisted System/Light/Dark appearance choice and appearance-aware PNG rendering.
+- Generated-snapshot consistency, stale-state detection, and save eligibility.
+- Local Report History storage, restart persistence, newest-first ordering, read-only open, and isolated deletion.
+- Corrupt-record and missing-image handling.
+
+### Implemented but pending manual validation
+
+- End-to-end acceptance of **Duplicate as New Draft** when it replaces current editor content; reconstruction and protection logic are automated, while the current UI test stops after confirming the warning can be cancelled.
+- A live VoiceOver usability walkthrough and complete keyboard-only workflow.
+- Final human visual review of every History and sharing state in both Light and Dark appearances.
+- Pasting report output into representative external email and messaging clients.
+
+### Deferred or out of scope
+
+- AI-assisted summarisation, organisation, or card recommendations.
+- Cloud sync, accounts, collaboration, and external project-management integrations.
+- Advanced templates, historical comparisons, and trend charts.
+- PDF, presentation, and document export formats.
+- Production security certification, enterprise deployment, and quantitative performance guarantees.
+
+## 7. Verification Baseline
+
+The latest reported full regression result is **106 passed, 0 failed, 0 skipped** for the `projectreportingbuilder` test plan. This count includes expanded parameterized Swift Testing cases and macOS XCUI tests.
+
+The project configuration establishes:
+
+- macOS deployment target: **27.0**
+- Project upgrade/toolchain baseline: **Xcode 27.2**
+- Shared scheme: **`projectreportingbuilder`**
+- Unit test framework: **Swift Testing**
+- UI test framework: **XCTest/XCUIAutomation**
+
+No claim is made that live VoiceOver behavior, production security, cloud readiness, or enterprise-scale performance has been fully validated.

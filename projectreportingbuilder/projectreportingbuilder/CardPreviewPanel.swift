@@ -29,6 +29,8 @@ struct CardPreviewPanel: View {
     let cards: [CardPreviewItem]
     let hasChanges: Bool
     let generationID: UUID
+    let canSaveReport: Bool
+    let saveReport: () throws -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -84,7 +86,11 @@ struct CardPreviewPanel: View {
                         VStack(alignment: .leading, spacing: 16) {
                             UnifiedReportView(cards: cards.map(\.card))
                                 .id(PreviewScrollAnchor.reportHeader)
-                            ReportSharingActions(cards: cards.map(\.card))
+                            ReportSharingActions(
+                                cards: cards.map(\.card),
+                                canSave: canSaveReport,
+                                save: saveReport
+                            )
 
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Share individual sections")
@@ -115,11 +121,14 @@ struct CardPreviewPanel: View {
     }
 }
 
-private struct ReportSharingActions: View {
+struct ReportSharingActions: View {
     let cards: [SnippetCard]
+    var canSave = false
+    var save: (() throws -> Void)?
     @Environment(\.colorScheme) private var colorScheme
     @State private var feedback: String?
     @State private var isSharing = false
+    @State private var isSaving = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -127,13 +136,19 @@ private struct ReportSharingActions: View {
                 HStack(spacing: 10) {
                     copyButton
                     exportButton
+                    if save != nil {
+                        saveButton
+                    }
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     copyButton
                     exportButton
+                    if save != nil {
+                        saveButton
+                    }
                 }
             }
-            .disabled(isSharing)
+            .disabled(isSharing || isSaving)
             if let feedback {
                 Text(feedback)
                     .font(.callout)
@@ -177,6 +192,25 @@ private struct ReportSharingActions: View {
             Label("Export Report as PNG…", systemImage: "square.and.arrow.up")
         }
         .accessibilityIdentifier("exportReport")
+    }
+
+    private var saveButton: some View {
+        Button {
+            guard let save else { return }
+            isSaving = true
+            defer { isSaving = false }
+            do {
+                try save()
+                feedback = "Saved this generated report."
+            } catch {
+                feedback = "Save failed: \(error.localizedDescription)"
+            }
+        } label: {
+            Label("Save Report", systemImage: "archivebox")
+        }
+        .disabled(!canSave)
+        .help(canSave ? "Save this generated report snapshot." : "Generate an up-to-date report before saving.")
+        .accessibilityIdentifier("saveReport")
     }
 }
 
@@ -251,7 +285,9 @@ private struct SnippetSharingRow: View {
     CardPreviewPanel(
         cards: ReportBuilder.build(from: draft).map(CardPreviewItem.init),
         hasChanges: false,
-        generationID: UUID()
+        generationID: UUID(),
+        canSaveReport: true,
+        saveReport: {}
     )
     .frame(width: 500, height: 740)
 }
